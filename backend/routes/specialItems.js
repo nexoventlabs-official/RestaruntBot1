@@ -346,19 +346,65 @@ router.put('/:id', auth, upload.single('image'), async (req, res) => {
   }
 });
 
-// Delete special item
+// Delete special item or remove a specific day
 router.delete('/:id', auth, async (req, res) => {
   try {
-    const item = await SpecialItem.findByIdAndDelete(req.params.id);
+    const { day } = req.query; // Optional: day to remove from the item
+    
+    const item = await SpecialItem.findById(req.params.id);
     if (!item) {
       return res.status(404).json({ error: 'Special item not found' });
     }
+    
+    // If day is specified, remove only that day from the item
+    if (day !== undefined) {
+      const dayNum = parseInt(day);
+      const itemDays = item.days && item.days.length > 0 ? item.days : [item.day];
+      
+      // Remove the specified day from the days array
+      const updatedDays = itemDays.filter(d => d !== dayNum);
+      
+      // If no days left, delete the entire item
+      if (updatedDays.length === 0) {
+        await SpecialItem.findByIdAndDelete(req.params.id);
+        
+        // Emit SSE event to notify clients
+        const eventEmitter = require('../services/eventEmitter');
+        eventEmitter.emit('dataUpdate', { type: 'special' });
+        
+        return res.json({ message: 'Special item deleted successfully (no days remaining)', deleted: true });
+      }
+      
+      // Update the item with the new days array
+      item.days = updatedDays;
+      item.day = updatedDays[0]; // Set primary day to first remaining day
+      
+      // Also remove the day schedule for this day if it exists
+      if (item.daySchedules && item.daySchedules.has(dayNum.toString())) {
+        item.daySchedules.delete(dayNum.toString());
+      }
+      
+      await item.save();
+      
+      // Emit SSE event to notify clients
+      const eventEmitter = require('../services/eventEmitter');
+      eventEmitter.emit('dataUpdate', { type: 'special' });
+      
+      return res.json({ 
+        message: `Special item removed from day ${dayNum}`, 
+        deleted: false,
+        item: serializeSpecialItem(item)
+      });
+    }
+    
+    // If no day specified, delete the entire item (original behavior)
+    await SpecialItem.findByIdAndDelete(req.params.id);
     
     // Emit SSE event to notify clients
     const eventEmitter = require('../services/eventEmitter');
     eventEmitter.emit('dataUpdate', { type: 'special' });
     
-    res.json({ message: 'Special item deleted successfully' });
+    res.json({ message: 'Special item deleted successfully', deleted: true });
   } catch (error) {
     console.error('Error deleting special item:', error);
     res.status(500).json({ error: 'Failed to delete special item' });

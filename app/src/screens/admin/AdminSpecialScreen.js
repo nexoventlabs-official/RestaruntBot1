@@ -200,30 +200,87 @@ export default function AdminSpecialScreen({ navigation }) {
     fetchSchedules();
   };
 
-  const handleDeleteItem = async (itemId) => {
-    Alert.alert(
-      'Delete Item',
-      'Are you sure you want to delete this special item?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setTogglingId(itemId);
-              await api.delete(`/special-items/${itemId}`);
-              setItems(items.filter(i => i._id !== itemId));
-              Alert.alert('Success', 'Item deleted successfully');
-            } catch (error) {
-              console.error('Error deleting item:', error);
-              Alert.alert('Error', 'Failed to delete item');
-            } finally {
-              setTogglingId(null);
+  const handleDeleteItem = async (itemId, itemName, itemDays) => {
+    const itemDaysArray = itemDays && itemDays.length > 0 ? itemDays : [];
+    const isMultipleDays = itemDaysArray.length > 1;
+    
+    // Determine the message based on whether item appears on multiple days
+    const deleteMessage = isMultipleDays
+      ? `This item appears on ${itemDaysArray.length} days. Do you want to:\n\n• Remove it from ${DAY_CATEGORIES[selectedDay].name} only\n• Delete it from all days`
+      : 'Are you sure you want to delete this special item?';
+    
+    const buttons = isMultipleDays
+      ? [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: `Remove from ${DAY_CATEGORIES[selectedDay].short}`,
+            onPress: async () => {
+              try {
+                setTogglingId(itemId);
+                // Pass the day parameter to remove only this day
+                const response = await api.delete(`/special-items/${itemId}?day=${selectedDay}`);
+                
+                // If item was completely deleted (no days remaining), remove from list
+                if (response.data.deleted) {
+                  setItems(items.filter(i => i._id !== itemId));
+                  Alert.alert('Success', 'Item deleted successfully');
+                } else {
+                  // Item still exists but removed from this day, refresh the list
+                  fetchItems();
+                  Alert.alert('Success', `Item removed from ${DAY_CATEGORIES[selectedDay].name}`);
+                }
+              } catch (error) {
+                console.error('Error removing item from day:', error);
+                Alert.alert('Error', 'Failed to remove item from this day');
+              } finally {
+                setTogglingId(null);
+              }
+            }
+          },
+          {
+            text: 'Delete from All Days',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                setTogglingId(itemId);
+                // Don't pass day parameter to delete entire item
+                await api.delete(`/special-items/${itemId}`);
+                setItems(items.filter(i => i._id !== itemId));
+                Alert.alert('Success', 'Item deleted from all days');
+              } catch (error) {
+                console.error('Error deleting item:', error);
+                Alert.alert('Error', 'Failed to delete item');
+              } finally {
+                setTogglingId(null);
+              }
             }
           }
-        }
-      ]
+        ]
+      : [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                setTogglingId(itemId);
+                await api.delete(`/special-items/${itemId}`);
+                setItems(items.filter(i => i._id !== itemId));
+                Alert.alert('Success', 'Item deleted successfully');
+              } catch (error) {
+                console.error('Error deleting item:', error);
+                Alert.alert('Error', 'Failed to delete item');
+              } finally {
+                setTogglingId(null);
+              }
+            }
+          }
+        ];
+    
+    Alert.alert(
+      'Delete Item',
+      deleteMessage,
+      buttons
     );
   };
 
@@ -427,16 +484,16 @@ export default function AdminSpecialScreen({ navigation }) {
           </View>
         </View>
 
-        {/* Delete Button - disabled when schedule locked */}
+        {/* Delete Button - always enabled, no schedule lock restriction */}
         <TouchableOpacity 
-          style={[styles.deleteButton, isScheduleLocked && styles.deleteButtonDisabled]} 
-          onPress={() => handleDeleteItem(item._id)}
-          disabled={togglingId === item._id || isScheduleLocked}
+          style={styles.deleteButton} 
+          onPress={() => handleDeleteItem(item._id, item.name, item.days)}
+          disabled={togglingId === item._id}
         >
           {togglingId === item._id ? (
             <ActivityIndicator size="small" color={ZOMATO_RED} />
           ) : (
-            <Ionicons name="trash-outline" size={20} color={isScheduleLocked ? "#9CA3AF" : ZOMATO_RED} />
+            <Ionicons name="trash-outline" size={20} color={ZOMATO_RED} />
           )}
         </TouchableOpacity>
       </TouchableOpacity>
