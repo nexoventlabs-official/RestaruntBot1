@@ -129,22 +129,10 @@ export default function SpecialItemFormScreen({ route, navigation }) {
           Alert.alert('Required', 'At least one day must be selected');
           return prev;
         }
-        // Remove day and its schedule
-        setDaySchedules(prevSchedules => {
-          const newSchedules = { ...prevSchedules };
-          delete newSchedules[dayIndex.toString()];
-          return newSchedules;
-        });
+        // Remove day
         return prev.filter(d => d !== dayIndex);
       } else {
-        // Add day with default schedule
-        setDaySchedules(prevSchedules => ({
-          ...prevSchedules,
-          [dayIndex.toString()]: {
-            startTime: '09:00',
-            endTime: '22:00'
-          }
-        }));
+        // Add day
         return [...prev, dayIndex].sort();
       }
     });
