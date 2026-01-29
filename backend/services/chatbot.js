@@ -3187,11 +3187,12 @@ const chatbot = {
             let msg = `😔 *Sorry!*\n\n`;
             
             // Group items by reason
-            const scheduleEndedItems = availabilityCheck.unavailableItems.filter(i => i.reason === 'schedule_ended');
-            const notScheduledItems = availabilityCheck.unavailableItems.filter(i => i.reason === 'not_scheduled_today');
+            const scheduleEndedItems = availabilityCheck.unavailableItems.filter(i => i.reason === 'schedule_ended' && i.isSpecialItem);
+            const notScheduledItems = availabilityCheck.unavailableItems.filter(i => i.reason === 'not_scheduled_today' && i.isSpecialItem);
             const soldOutItems = availabilityCheck.unavailableItems.filter(i => i.reason === 'unavailable');
+            const categoryPausedItems = availabilityCheck.unavailableItems.filter(i => i.reason === 'category_paused');
             const otherItems = availabilityCheck.unavailableItems.filter(i => 
-              i.reason !== 'schedule_ended' && i.reason !== 'not_scheduled_today' && i.reason !== 'unavailable'
+              i.reason !== 'schedule_ended' && i.reason !== 'not_scheduled_today' && i.reason !== 'unavailable' && i.reason !== 'category_paused'
             );
             
             // Check if user just added an item (viewing item details)
@@ -3233,6 +3234,14 @@ const chatbot = {
                 msg += `🔴 *Currently unavailable:*\n`;
               }
               soldOutItems.forEach(item => {
+                msg += `❌ ${item.name}\n`;
+              });
+              msg += `\n`;
+            }
+            
+            if (categoryPausedItems.length > 0) {
+              msg += `⏸️ *Temporarily unavailable:*\n`;
+              categoryPausedItems.forEach(item => {
                 msg += `❌ ${item.name}\n`;
               });
               msg += `\n`;
