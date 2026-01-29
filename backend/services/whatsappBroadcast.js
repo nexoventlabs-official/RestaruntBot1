@@ -146,7 +146,7 @@ const whatsappBroadcast = {
       }
       message += `Order now and enjoy this amazing deal! 🍽️`;
 
-      const websiteUrl = 'http://localhost:5173/offers';
+      const websiteUrl = process.env.WEBSITE_URL || 'https://restarunt-bot1.vercel.app/offers';
 
       console.log(`[WhatsApp Broadcast] Sending offer to ${contacts.length} contacts...`);
       console.log(`[WhatsApp Broadcast] Note: Customers outside 24h window will receive via template`);
@@ -463,7 +463,7 @@ const whatsappBroadcast = {
       }
       message += `Order now and enjoy this amazing deal! 🍽️`;
 
-      const websiteUrl = 'http://localhost:5173/offers';
+      const websiteUrl = process.env.WEBSITE_URL || 'https://restarunt-bot1.vercel.app/offers';
 
       console.log(`[WhatsApp Broadcast] Testing send to ${phone}...`);
 

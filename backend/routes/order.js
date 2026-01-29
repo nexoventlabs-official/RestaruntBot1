@@ -321,7 +321,7 @@ router.put('/:id/status', authMiddleware, async (req, res) => {
           msg += `\n🙏 Thank you for ordering!\nWe hope you enjoy your meal! 🍽️`;
           
           // Send combined message with image and review CTA button
-          const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+          const frontendUrl = process.env.FRONTEND_URL || 'https://restarunt-bot1.vercel.app';
           const reviewUrl = `${frontendUrl}/review/${order.customer.phone}/${order.orderId}`;
           
           // Use pickup_completed image for pickup orders, delivered image for delivery orders
@@ -362,7 +362,7 @@ router.put('/:id/status', authMiddleware, async (req, res) => {
           );
         } else if (status === 'out_for_delivery') {
           // Send image with track order button for out_for_delivery status
-          const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+          const frontendUrl = process.env.FRONTEND_URL || 'https://restarunt-bot1.vercel.app';
           const trackOrderUrl = `${frontendUrl}/track/${order.orderId}`;
           const deliveryImageUrl = await chatbotImagesService.getImageUrl('out_for_delivery');
           
@@ -376,7 +376,7 @@ router.put('/:id/status', authMiddleware, async (req, res) => {
           );
         } else if (status === 'preparing') {
           // Send image with track order button for preparing status
-          const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+          const frontendUrl = process.env.FRONTEND_URL || 'https://restarunt-bot1.vercel.app';
           const trackOrderUrl = `${frontendUrl}/track/${order.orderId}`;
           const preparingImageUrl = await chatbotImagesService.getImageUrl('preparing');
           
@@ -390,7 +390,7 @@ router.put('/:id/status', authMiddleware, async (req, res) => {
           );
         } else if (status === 'ready') {
           // Send image with track order button for ready status
-          const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+          const frontendUrl = process.env.FRONTEND_URL || 'https://restarunt-bot1.vercel.app';
           const trackOrderUrl = `${frontendUrl}/track/${order.orderId}`;
           const readyImageUrl = await chatbotImagesService.getImageUrl('ready');
           

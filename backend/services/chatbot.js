@@ -5988,7 +5988,7 @@ const chatbot = {
 
     try {
       // Generate payment page URL (UPI app selection page)
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      const frontendUrl = process.env.FRONTEND_URL || 'https://restarunt-bot1.vercel.app';
       const paymentPageUrl = `${frontendUrl}/pay/${orderId}`;
 
       const orderDetailsImageUrl = await chatbotImagesService.getImageUrl('order_details');
@@ -6422,7 +6422,7 @@ const chatbot = {
 
   // ============ WEBSITE LINK ============
   async sendWebsiteLink(phone) {
-    const websiteUrl = 'http://localhost:5173';
+    const websiteUrl = process.env.WEBSITE_URL || 'https://restarunt-bot1.vercel.app';
     const msg = `🌐 *Visit Our Website*\n\n` +
       `Order delicious food directly from our website!\n\n` +
       `✨ Browse full menu with images\n` +
