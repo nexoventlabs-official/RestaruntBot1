@@ -1,0 +1,551 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  *, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+  }
+  
+  /* Allow text selection in input fields */
+  input, textarea {
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+  }
+
+  /* Lenis smooth scroll styles */
+  html.lenis, html.lenis body {
+    height: auto;
+  }
+
+  .lenis.lenis-smooth {
+    scroll-behavior: auto !important;
+  }
+
+  .lenis.lenis-smooth [data-lenis-prevent] {
+    overscroll-behavior: contain;
+  }
+
+  .lenis.lenis-stopped {
+    overflow: hidden;
+  }
+
+  .lenis.lenis-scrolling iframe {
+    pointer-events: none;
+  }
+
+  /* Ultra-smooth scrolling enhancements */
+  html {
+    scroll-behavior: auto; /* Let Lenis handle scrolling */
+    -webkit-overflow-scrolling: touch; /* Smooth momentum on iOS */
+  }
+
+  /* Prevent scroll anchoring issues */
+  * {
+    overflow-anchor: none;
+  }
+
+  /* Smooth transform for all animated elements */
+  .smooth-transform {
+    will-change: transform;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+  }
+
+  /* Prevent layout shifts during scroll */
+  body {
+    overscroll-behavior: none;
+    overscroll-behavior-y: none;
+  }
+
+  html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    width: 100%;
+    overflow-x: hidden;
+  }
+
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+    min-height: 100%;
+    width: 100%;
+    overflow-x: hidden;
+  }
+
+  #root {
+    margin: 0;
+    padding: 0;
+    min-height: 100%;
+    width: 100%;
+    overflow-x: hidden;
+  }
+
+  body {
+    font-family: 'Poppins', system-ui, -apple-system, sans-serif;
+    background-color: #1c1d21;
+    color: #1c1d21;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Hide scrollbar globally */
+* {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+*::-webkit-scrollbar {
+  display: none;
+}
+
+/* Smooth transitions */
+.transition-smooth {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Card hover effect */
+.card-hover {
+  transition: all 0.2s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+/* Gradient backgrounds */
+.gradient-primary {
+  background: linear-gradient(135deg, #e63946 0%, #ff6f5c 100%);
+}
+
+.gradient-accent {
+  background: linear-gradient(135deg, #ff8412 0%, #ffc170 100%);
+}
+
+.gradient-dark {
+  background: linear-gradient(135deg, #1c1d21 0%, #3f4046 100%);
+}
+
+/* Status badges */
+.badge {
+  @apply px-3 py-1 rounded-full text-xs font-semibold inline-flex items-center gap-1;
+}
+
+/* Input focus styles */
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(230, 57, 70, 0.15);
+}
+
+/* Custom select dropdown styling */
+select {
+  background-image: none;
+}
+
+select option {
+  padding: 12px 16px;
+  background-color: #fff;
+  color: #1c1d21;
+}
+
+select option:hover,
+select option:focus,
+select option:checked {
+  background: linear-gradient(135deg, #e63946 0%, #ff6f5c 100%);
+  color: #fff;
+}
+
+/* Button base styles */
+.btn {
+  @apply px-4 py-2 rounded-xl font-medium transition-all duration-200 inline-flex items-center justify-center gap-2;
+}
+
+.btn-primary {
+  @apply bg-primary-600 text-white hover:bg-primary-700 active:scale-[0.98];
+}
+
+.btn-secondary {
+  @apply bg-dark-100 text-dark-700 hover:bg-dark-200 active:scale-[0.98];
+}
+
+.btn-accent {
+  @apply bg-accent-500 text-white hover:bg-accent-600 active:scale-[0.98];
+}
+
+/* Table styles */
+.table-container {
+  @apply bg-white rounded-2xl shadow-card overflow-hidden;
+}
+
+.table-header {
+  @apply bg-dark-50 text-dark-500 text-xs font-semibold uppercase tracking-wider;
+}
+
+.table-row {
+  @apply border-b border-dark-100 hover:bg-dark-50 transition-colors;
+}
+
+/* Modal backdrop */
+.modal-backdrop {
+  @apply fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50;
+}
+
+.modal-content {
+  @apply bg-white rounded-2xl shadow-2xl max-h-[90vh] overflow-hidden animate-slide-in;
+}
+
+/* Pulse animation for live indicator */
+@keyframes livePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.live-indicator {
+  animation: livePulse 2s ease-in-out infinite;
+}
+
+/* Safe area for iOS devices */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+/* Hide scrollbar but keep functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Horizontal scroll container for touch devices */
+.horizontal-scroll-container {
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  overscroll-behavior-x: contain;
+}
+
+.horizontal-scroll-container > * {
+  scroll-snap-align: start;
+}
+
+/* Enhanced smooth scrolling for mobile and tablet horizontal containers */
+@media (max-width: 1023px) {
+  .scrollbar-hide {
+    /* Ultra-smooth momentum scrolling for iOS */
+    -webkit-overflow-scrolling: touch;
+    /* Smooth scroll behavior */
+    scroll-behavior: smooth;
+    /* Contain overscroll to prevent page bounce */
+    overscroll-behavior-x: contain;
+    overscroll-behavior-y: auto;
+    /* Enable GPU acceleration */
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    /* Smooth transitions */
+    transition: scroll-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Smooth snap scrolling for category filters */
+  .scrollbar-hide.snap-scroll {
+    scroll-snap-type: x proximity;
+    scroll-padding: 0 1rem;
+  }
+
+  .scrollbar-hide.snap-scroll > * {
+    scroll-snap-align: center;
+    scroll-snap-stop: normal;
+  }
+
+  /* Prevent vertical scroll interference during horizontal scroll */
+  .scrollbar-hide[data-lenis-prevent] {
+    touch-action: pan-x pan-y;
+    -webkit-touch-callout: none;
+  }
+}
+
+/* Tablet-specific optimizations (768px - 1023px) */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .scrollbar-hide {
+    /* Slightly faster scroll for tablets */
+    scroll-behavior: smooth;
+    scroll-snap-type: x proximity;
+  }
+  
+  .scrollbar-hide > * {
+    scroll-snap-align: start;
+  }
+}
+
+/* Mobile-specific optimizations (< 768px) */
+@media (max-width: 767px) {
+  .scrollbar-hide {
+    /* Extra smooth momentum for mobile */
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+    /* Tighter snap for smaller screens */
+    scroll-snap-type: x mandatory;
+    scroll-padding: 0 0.5rem;
+  }
+  
+  .scrollbar-hide > * {
+    scroll-snap-align: center;
+  }
+}
+
+/* Slide-in animation for sidebar */
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+/* Slide-out animation */
+@keyframes slideOut {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+.animate-slide-out {
+  animation: slideOut 0.3s ease-in;
+}
+
+/* Hero carousel animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { 
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes progress {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.6s ease-out forwards;
+}
+
+.animate-fade-in-delay {
+  animation: fadeIn 0.6s ease-out 0.4s forwards;
+  opacity: 0;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.6s ease-out forwards;
+}
+
+.animate-slide-up-delay {
+  animation: slideUp 0.6s ease-out 0.2s forwards;
+  opacity: 0;
+}
+
+.animate-progress {
+  animation: progress linear forwards;
+}
+
+
+/* Infinite marquee animation for category slider */
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee 30s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+/* Step-by-step marquee animation - moves one card every 3 seconds with very smooth scroll */
+@keyframes marqueeStep {
+  0%, 65% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-200px); /* width of one card (176px + 24px margin) */
+  }
+}
+
+.animate-marquee-step {
+  animation: marqueeStep 3s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.animate-marquee-step:hover {
+  animation-play-state: paused;
+}
+
+
+/* GSAP Animation Utility Classes */
+.gsap-fade-in {
+  opacity: 0;
+}
+
+.gsap-fade-up {
+  opacity: 0;
+  transform: translateY(60px);
+}
+
+.gsap-fade-left {
+  opacity: 0;
+  transform: translateX(-60px);
+}
+
+.gsap-fade-right {
+  opacity: 0;
+  transform: translateX(60px);
+}
+
+.gsap-scale-in {
+  opacity: 0;
+  transform: scale(0.8);
+}
+
+/* Smooth will-change for better performance */
+.will-animate {
+  will-change: transform, opacity;
+}
+
+/* GPU acceleration for smooth animations */
+.gpu-accelerated {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+
+/* Custom scrollbar for dialog - visible on PC */
+.scrollbar-dialog {
+  scrollbar-width: thin;
+  scrollbar-color: #ff9924 #f3f4f6;
+}
+
+.scrollbar-dialog::-webkit-scrollbar {
+  display: block;
+  width: 8px;
+}
+
+.scrollbar-dialog::-webkit-scrollbar-track {
+  background: #f3f4f6;
+  border-radius: 10px;
+}
+
+.scrollbar-dialog::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #ff9924 0%, #ff6b00 100%);
+  border-radius: 10px;
+}
+
+.scrollbar-dialog::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #ff6b00 0%, #e65c00 100%);
+}
+
+/* Custom scrollbar for cart sidebar */
+.scrollbar-cart {
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db #f3f4f6;
+}
+
+.scrollbar-cart::-webkit-scrollbar {
+  display: block !important;
+  width: 6px;
+}
+
+.scrollbar-cart::-webkit-scrollbar-track {
+  background: #f3f4f6;
+  border-radius: 10px;
+}
+
+.scrollbar-cart::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 10px;
+}
+
+.scrollbar-cart::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+
+/* Image preloading optimization */
+img {
+  content-visibility: auto;
+}
+
+/* Prevent image loading flicker */
+img[src] {
+  opacity: 1;
+  transition: opacity 0.2s ease-in-out;
+}
+
+img:not([src]), img[src=""] {
+  opacity: 0;
+}
+
+/* Eager loading for critical images */
+img.eager-load {
+  loading: eager;
+}
+
+/* Lazy loading placeholder */
+.img-placeholder {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Marquee animation for announcement bar */
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-33.33%); }
+}
+
+.animate-marquee {
+  animation: marquee 20s linear infinite;
+}
