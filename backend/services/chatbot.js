@@ -1650,8 +1650,7 @@ const chatbot = {
       }
     }
 
-    // Get active special items - fetch all for today and validate with isSpecialItemActive
-    // Removed isWithinSchedule check - let isSpecialItemActive handle schedule validation
+    // Always fetch and validate special items in real time for every search
     const allSpecialItemsForToday = await SpecialItem.find({
       $or: [
         { days: currentDay },
@@ -1660,21 +1659,17 @@ const chatbot = {
       available: true,
       isPaused: { $ne: true }
     });
-    
-    console.log(`📋 smartSearch: Found ${allSpecialItemsForToday.length} special items for day ${currentDay}`);
-    
-    // Validate each special item is currently active (within schedule)
+
+    // Real-time validation: filter only those that are currently active (schedule, pause, etc.)
     const activeSpecialItems = [];
     for (const item of allSpecialItemsForToday) {
-      const isActive = await isSpecialItemActive(item);
-      if (isActive) {
+      // Always check isSpecialItemActive for real-time status
+      if (await isSpecialItemActive(item)) {
         activeSpecialItems.push(item);
-      } else {
-        console.log(`⏰ Special item "${item.name}" excluded from smartSearch - schedule inactive`);
       }
     }
-    
-    console.log(`🔥 smartSearch: ${activeSpecialItems.length} special items active after schedule check`);
+    // Log for debug
+    console.log(`🔥 smartSearch: ${activeSpecialItems.length} special items active after real-time schedule check`);
     
     // Detect food type preference from primary translation
     const detected = this.detectFoodTypeFromMessage(primaryText);
