@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Bike, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'https://restaruntbot1.onrender.com/api';
 
 export default function DeliveryLogin() {
   const [email, setEmail] = useState('');

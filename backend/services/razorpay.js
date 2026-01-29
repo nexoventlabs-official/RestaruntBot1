@@ -67,7 +67,7 @@ const razorpayService = {
         notify: { sms: true, email: false },
         reminder_enable: true,
         notes: { orderId },
-        callback_url: `${process.env.BACKEND_URL || 'http://localhost:5000'}/api/payment/callback`,
+        callback_url: `${process.env.BACKEND_URL || 'https://restaruntbot1.onrender.com'}/api/payment/callback`,
         callback_method: 'get'
       };
       

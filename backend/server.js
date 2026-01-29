@@ -33,6 +33,7 @@ const app = express();
 // CORS configuration
 const corsOptions = {
   origin: [
+    'https://restarunt-bot1.vercel.app',
     'http://localhost:5173', 
     'http://localhost:3000', 
     'http://localhost:5000'

@@ -15,9 +15,9 @@ import {
 } from './Icons';
 
 const WHATSAPP_NUMBER = '15551831644';
-const API_URL = 'http://localhost:5000/api/public';
-const SETTINGS_URL = 'http://localhost:5000/api/settings';
-const SSE_URL = 'http://localhost:5000/api/events';
+const API_URL = 'https://restaruntbot1.onrender.com/api/public';
+const SETTINGS_URL = 'https://restaruntbot1.onrender.com/api/settings';
+const SSE_URL = 'https://restaruntbot1.onrender.com/api/events';
 
 const navLinks = [
   { path: '/', label: 'Home', icon: HomeIcon },
@@ -66,7 +66,7 @@ export default function UserLayout() {
       const [catRes, itemRes, specialRes, holidayRes] = await Promise.all([
         axios.get(`${API_URL}/categories`),
         axios.get(`${API_URL}/menu`),
-        axios.get('http://localhost:5000/api/special-items/today').catch(() => ({ data: [] })),
+        axios.get('https://restaruntbot1.onrender.com/api/special-items/today').catch(() => ({ data: [] })),
         axios.get(`${SETTINGS_URL}/holiday/status`).catch(() => ({ data: { holidayMode: false } }))
       ]);
       setCategories(catRes.data);

@@ -4,8 +4,8 @@ import axios from 'axios';
 import { Star, Plus, Minus, Heart, ShoppingCart, X, Clock, Package, Search, Tag } from 'lucide-react';
 import { useCachedData } from '../hooks/useImagePreloader';
 
-const API_URL = 'http://localhost:5000/api/public';
-const SSE_URL = 'http://localhost:5000/api/events';
+const API_URL = 'https://restaruntbot1.onrender.com/api/public';
+const SSE_URL = 'https://restaruntbot1.onrender.com/api/events';
 const WHATSAPP_NUMBER = '15551831644';
 
 // WhatsApp Icon Component

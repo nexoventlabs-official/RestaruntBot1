@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { X } from 'lucide-react';
 
-const API_URL = 'http://localhost:5000/api/public';
+const API_URL = 'https://restaruntbot1.onrender.com/api/public';
 
 export default function OfferPopup() {
   const navigate = useNavigate();

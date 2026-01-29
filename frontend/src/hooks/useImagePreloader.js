@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api/public';
+const API_URL = 'https://restaruntbot1.onrender.com/api/public';
 
 // Global cache for preloaded data
 let cachedData = {

@@ -4,8 +4,8 @@ import { Clock, Star, ShoppingCart, Heart, Plus, Minus, AlertCircle } from 'luci
 import { useCart } from '../hooks/useCart';
 import CartSidebar from '../components/CartSidebar';
 
-const API_URL = 'http://localhost:5000/api/public';
-const SSE_URL = 'http://localhost:5000/api/events';
+const API_URL = 'https://restaruntbot1.onrender.com/api/public';
+const SSE_URL = 'https://restaruntbot1.onrender.com/api/events';
 const WHATSAPP_NUMBER = '15551831644';
 
 export default function UserMenu() {

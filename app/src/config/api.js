@@ -2,9 +2,9 @@ import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
 // Change this to your backend URL
-// For physical device/emulator, use your computer's IP address
-// For iOS Simulator, you can use localhost
-export const API_BASE_URL = 'http://192.168.0.109:5000';
+// For development: use your computer's IP address (e.g., http://192.168.0.109:5000)
+// For production: use your deployed backend URL
+export const API_BASE_URL = 'https://restaruntbot1.onrender.com';
 
 // Event emitter for auth events
 let authLogoutCallback = null;

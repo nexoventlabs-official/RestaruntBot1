@@ -9,7 +9,7 @@ import {
 import { Star, Heart, ShoppingCart, Plus, Minus, X, Clock, Package, Tag } from 'lucide-react';
 import { useCachedData } from '../hooks/useImagePreloader';
 
-const API_URL = 'http://localhost:5000/api/public';
+const API_URL = 'https://restaruntbot1.onrender.com/api/public';
 
 // Category Card Component
 const CategoryCard = ({ cat, getCategoryItemCount }) => (

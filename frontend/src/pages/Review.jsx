@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
 import { StarIcon, ArrowLeftIcon, CheckCircleIcon, XCircleIcon, TruckIcon } from '../components/Icons';
 
-const API_URL = 'http://localhost:5000/api/public';
+const API_URL = 'https://restaruntbot1.onrender.com/api/public';
 
 export default function Review() {
   const { phone, orderId } = useParams();

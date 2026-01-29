@@ -3,8 +3,8 @@ import { useOutletContext } from 'react-router-dom';
 import axios from 'axios';
 import { Star, Plus, Minus, Heart, ShoppingCart, X, Clock, Lock, Flame } from 'lucide-react';
 
-const API_URL = 'http://localhost:5000/api';
-const SSE_URL = 'http://localhost:5000/api/events';
+const API_URL = 'https://restaruntbot1.onrender.com/api';
+const SSE_URL = 'https://restaruntbot1.onrender.com/api/events';
 const WHATSAPP_NUMBER = '15551831644';
 
 // WhatsApp Icon Component
