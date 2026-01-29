@@ -1670,17 +1670,17 @@ const chatbot = {
     }
 
     // Get active special items - fetch all for today and validate with isSpecialItemActive
-    let allSpecialItemsForToday = [];
-    if (isWithinSchedule) {
-      allSpecialItemsForToday = await SpecialItem.find({
-        $or: [
-          { days: currentDay },
-          { day: currentDay }
-        ],
-        available: true,
-        isPaused: { $ne: true }
-      });
-    }
+    // Removed isWithinSchedule check - let isSpecialItemActive handle schedule validation
+    const allSpecialItemsForToday = await SpecialItem.find({
+      $or: [
+        { days: currentDay },
+        { day: currentDay }
+      ],
+      available: true,
+      isPaused: { $ne: true }
+    });
+    
+    console.log(`📋 smartSearch: Found ${allSpecialItemsForToday.length} special items for day ${currentDay}`);
     
     // Validate each special item is currently active (within schedule)
     const activeSpecialItems = [];
@@ -1692,6 +1692,8 @@ const chatbot = {
         console.log(`⏰ Special item "${item.name}" excluded from smartSearch - schedule inactive`);
       }
     }
+    
+    console.log(`🔥 smartSearch: ${activeSpecialItems.length} special items active after schedule check`);
     
     // Detect food type preference from primary translation
     const detected = this.detectFoodTypeFromMessage(primaryText);
@@ -4056,8 +4058,11 @@ const chatbot = {
         let matchingMenuItems = [];
         const searchTerm = msg.toLowerCase().trim();
         
-        if (isWithinSchedule && msg.length >= 2) {
+        // Always search special items if search term is valid (removed isWithinSchedule check)
+        // Let isSpecialItemActive handle schedule validation per item
+        if (msg.length >= 2) {
           console.log(`🔍 Searching for items with term: "${searchTerm}"`);
+          console.log(`⏰ Current time check - isWithinSchedule: ${isWithinSchedule}`);
           
           const todaySpecialItems = await SpecialItem.find({
             $or: [
@@ -4068,7 +4073,7 @@ const chatbot = {
             isPaused: { $ne: true }
           });
           
-          console.log(`📋 Today's special items:`, todaySpecialItems.map(i => i.name));
+          console.log(`📋 Today's special items found in DB:`, todaySpecialItems.map(i => i.name));
           
           // Find ALL matching special items (by name or tags)
           const potentialMatches = todaySpecialItems.filter(item => 
@@ -4076,6 +4081,8 @@ const chatbot = {
             searchTerm.includes(item.name.toLowerCase()) ||
             (item.tags && item.tags.some(tag => tag.toLowerCase().includes(searchTerm)))
           );
+          
+          console.log(`🔍 Potential matches before schedule check:`, potentialMatches.map(i => i.name));
           
           // Validate each special item is currently active (within schedule)
           for (const item of potentialMatches) {
@@ -4087,7 +4094,7 @@ const chatbot = {
             }
           }
           
-          console.log(`🔥 Matching special items (active):`, matchingSpecialItems.map(i => i.name));
+          console.log(`🔥 Matching special items (active after schedule check):`, matchingSpecialItems.map(i => i.name));
         }
         
         // Also search regular menu items using smartSearch (includes fuzzy matching)
