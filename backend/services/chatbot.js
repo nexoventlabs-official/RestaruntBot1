@@ -1645,10 +1645,10 @@ const chatbot = {
       }
     }
 
-    // Get active special items
-    let activeSpecialItems = [];
+    // Get active special items - fetch all for today and validate with isSpecialItemActive
+    let allSpecialItemsForToday = [];
     if (isWithinSchedule) {
-      activeSpecialItems = await SpecialItem.find({
+      allSpecialItemsForToday = await SpecialItem.find({
         $or: [
           { days: currentDay },
           { day: currentDay }
@@ -1656,6 +1656,17 @@ const chatbot = {
         available: true,
         isPaused: { $ne: true }
       });
+    }
+    
+    // Validate each special item is currently active (within schedule)
+    const activeSpecialItems = [];
+    for (const item of allSpecialItemsForToday) {
+      const isActive = await isSpecialItemActive(item);
+      if (isActive) {
+        activeSpecialItems.push(item);
+      } else {
+        console.log(`⏰ Special item "${item.name}" excluded from smartSearch - schedule inactive`);
+      }
     }
     
     // Detect food type preference from primary translation
