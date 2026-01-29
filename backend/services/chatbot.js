@@ -18,6 +18,48 @@ const generateOrderId = (serviceType = 'delivery') => {
   return prefix + 'RD' + Date.now().toString(36).toUpperCase();
 };
 
+// Helper to check if a special item is currently active (within schedule)
+const isSpecialItemActive = async (specialItem) => {
+  if (!specialItem) return false;
+  
+  // Check if item is available and not paused
+  if (!specialItem.available || specialItem.isPaused) return false;
+  
+  // Get current time
+  const now = new Date();
+  const currentDay = now.getDay();
+  const currentHours = now.getHours();
+  const currentMinutes = now.getMinutes();
+  const currentTotalMinutes = currentHours * 60 + currentMinutes;
+  
+  // Check if special item is scheduled for today
+  const itemDays = specialItem.days && specialItem.days.length > 0 ? specialItem.days : [specialItem.day];
+  if (!itemDays.includes(currentDay)) return false;
+  
+  // Get global schedule for today
+  const todayGlobalSchedule = await DaySchedule.findOne({ day: currentDay });
+  
+  // Check if within global schedule time
+  if (todayGlobalSchedule && todayGlobalSchedule.startTime && todayGlobalSchedule.endTime) {
+    const [startHours, startMins] = todayGlobalSchedule.startTime.split(':').map(Number);
+    const [endHours, endMins] = todayGlobalSchedule.endTime.split(':').map(Number);
+    const startTotalMinutes = startHours * 60 + startMins;
+    const endTotalMinutes = endHours * 60 + endMins;
+    
+    let isWithinSchedule;
+    if (endTotalMinutes < startTotalMinutes) {
+      // Overnight schedule
+      isWithinSchedule = currentTotalMinutes >= startTotalMinutes || currentTotalMinutes <= endTotalMinutes;
+    } else {
+      isWithinSchedule = currentTotalMinutes >= startTotalMinutes && currentTotalMinutes <= endTotalMinutes;
+    }
+    
+    if (!isWithinSchedule) return false;
+  }
+  
+  return true;
+};
+
 // Helper to check if cart items are still available
 const checkCartAvailability = async (cart) => {
   if (!cart || cart.length === 0) return { available: true, unavailableItems: [] };
@@ -2417,8 +2459,13 @@ const chatbot = {
         if (!exactMatch || wasMarkedSpecial) {
           const specialMatch = specialItems.find(item => fuzzyMatch(item.name));
           if (specialMatch) {
-            exactMatch = specialMatch;
-            isSpecialItem = true;
+            // Check if special item is currently active
+            const isActive = await isSpecialItemActive(specialMatch);
+            if (isActive) {
+              exactMatch = specialMatch;
+              isSpecialItem = true;
+            }
+            // If not active, don't show it - let it fall through to "not found"
           }
         }
         
@@ -2850,6 +2897,26 @@ const chatbot = {
         if (isFromSpecialItemModel) {
           // Get from SpecialItem model
           item = await SpecialItem.findById(itemId);
+          
+          // Check if special item is currently active
+          if (item) {
+            const isActive = await isSpecialItemActive(item);
+            if (!isActive) {
+              // Special item is no longer active
+              await whatsapp.sendButtons(phone, 
+                `😔 Sorry! This special item is no longer available.\n\n🔥 *${item.name}* was a limited-time offer.`,
+                [
+                  { id: 'popular_today', text: 'View Today\'s Special' },
+                  { id: 'view_full_menu', text: 'View Menu' },
+                  { id: 'home', text: 'Main Menu' }
+                ]
+              );
+              state.currentStep = 'main_menu';
+              customer.conversationState = state;
+              await customer.save();
+              return;
+            }
+          }
         } else {
           // Get from MenuItem model (legacy isTodaySpecial)
           item = menuItems.find(m => m._id.toString() === itemId);
@@ -2890,6 +2957,24 @@ const chatbot = {
         const item = await SpecialItem.findById(itemId);
         
         if (item) {
+          // Check if special item is currently active
+          const isActive = await isSpecialItemActive(item);
+          if (!isActive) {
+            // Special item is no longer active
+            await whatsapp.sendButtons(phone, 
+              `😔 Sorry! This special item is no longer available.\n\n🔥 *${item.name}* was a limited-time offer.`,
+              [
+                { id: 'popular_today', text: 'View Today\'s Special' },
+                { id: 'view_full_menu', text: 'View Menu' },
+                { id: 'home', text: 'Main Menu' }
+              ]
+            );
+            state.currentStep = 'main_menu';
+            customer.conversationState = state;
+            await customer.save();
+            return;
+          }
+          
           state.selectedSpecialItem = item._id.toString();
           state.selectedItem = null; // Clear regular item selection
           state.currentStep = 'select_special_qty';
@@ -2917,6 +3002,24 @@ const chatbot = {
         const item = await SpecialItem.findById(itemId);
         
         if (item && qty > 0) {
+          // Check if special item is currently active
+          const isActive = await isSpecialItemActive(item);
+          if (!isActive) {
+            // Special item is no longer active
+            await whatsapp.sendButtons(phone, 
+              `😔 Sorry! This special item is no longer available.\n\n🔥 *${item.name}* was a limited-time offer.`,
+              [
+                { id: 'popular_today', text: 'View Today\'s Special' },
+                { id: 'view_full_menu', text: 'View Menu' },
+                { id: 'home', text: 'Main Menu' }
+              ]
+            );
+            state.currentStep = 'main_menu';
+            customer.conversationState = state;
+            await customer.save();
+            return;
+          }
+          
           customer.cart = customer.cart || [];
           // Check if special item already in cart
           const existingIndex = customer.cart.findIndex(c => 
