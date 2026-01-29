@@ -37,49 +37,63 @@ const isSpecialItemActive = async (specialItem) => {
   const currentHours = now.getHours();
   const currentMinutes = now.getMinutes();
   const currentTotalMinutes = currentHours * 60 + currentMinutes;
-  
+
   console.log(`⏰ isSpecialItemActive: "${specialItem.name}" - Current time: ${currentHours}:${currentMinutes.toString().padStart(2, '0')} (${currentTotalMinutes} mins), Day: ${currentDay}`);
-  
+
   // Check if special item is scheduled for today
   const itemDays = specialItem.days && specialItem.days.length > 0 ? specialItem.days : [specialItem.day];
   console.log(`⏰ isSpecialItemActive: "${specialItem.name}" - Scheduled days: [${itemDays.join(', ')}]`);
-  
+
   if (!itemDays.includes(currentDay)) {
     console.log(`⏰ isSpecialItemActive: "${specialItem.name}" - NOT scheduled for today (day ${currentDay})`);
     return false;
   }
-  
-  // Get global schedule for today
-  const todayGlobalSchedule = await DaySchedule.findOne({ day: currentDay });
-  
-  if (!todayGlobalSchedule || !todayGlobalSchedule.startTime || !todayGlobalSchedule.endTime) {
-    console.log(`⏰ isSpecialItemActive: "${specialItem.name}" - NO schedule set for day ${currentDay}, item is ACTIVE (default)`);
-    return true;
+
+  // Use per-day schedule if available (specialItem.daySchedules)
+  let startTime = null;
+  let endTime = null;
+  if (specialItem.daySchedules && specialItem.daySchedules.has(String(currentDay))) {
+    const schedule = specialItem.daySchedules.get(String(currentDay));
+    startTime = schedule?.startTime;
+    endTime = schedule?.endTime;
+    console.log(`⏰ isSpecialItemActive: "${specialItem.name}" - Using per-day schedule: ${startTime} - ${endTime}`);
   }
-  
-  console.log(`⏰ isSpecialItemActive: "${specialItem.name}" - Day ${currentDay} schedule: ${todayGlobalSchedule.startTime} - ${todayGlobalSchedule.endTime}`);
-  
-  // Check if within global schedule time
-  const [startHours, startMins] = todayGlobalSchedule.startTime.split(':').map(Number);
-  const [endHours, endMins] = todayGlobalSchedule.endTime.split(':').map(Number);
+  // Fallback to global schedule if per-day not set
+  if (!startTime || !endTime) {
+    const todayGlobalSchedule = await DaySchedule.findOne({ day: currentDay });
+    if (todayGlobalSchedule && todayGlobalSchedule.startTime && todayGlobalSchedule.endTime) {
+      startTime = todayGlobalSchedule.startTime;
+      endTime = todayGlobalSchedule.endTime;
+      console.log(`⏰ isSpecialItemActive: "${specialItem.name}" - Using global schedule: ${startTime} - ${endTime}`);
+    } else {
+      // No schedule set, item is active by default
+      console.log(`⏰ isSpecialItemActive: "${specialItem.name}" - NO schedule set for day ${currentDay}, item is ACTIVE (default)`);
+      return true;
+    }
+  }
+
+  // Check if within schedule time (per-day or global)
+  const [startHours, startMins] = startTime.split(':').map(Number);
+  const [endHours, endMins] = endTime.split(':').map(Number);
   const startTotalMinutes = startHours * 60 + startMins;
   const endTotalMinutes = endHours * 60 + endMins;
-  
+
   let isWithinSchedule;
   if (endTotalMinutes < startTotalMinutes) {
     // Overnight schedule
     isWithinSchedule = currentTotalMinutes >= startTotalMinutes || currentTotalMinutes <= endTotalMinutes;
     console.log(`⏰ isSpecialItemActive: "${specialItem.name}" - Overnight schedule check: ${isWithinSchedule}`);
   } else {
-    isWithinSchedule = currentTotalMinutes >= startTotalMinutes && currentTotalMinutes <= endTotalMinutes;
-    console.log(`⏰ isSpecialItemActive: "${specialItem.name}" - Regular schedule check: ${currentTotalMinutes} >= ${startTotalMinutes} && ${currentTotalMinutes} <= ${endTotalMinutes} = ${isWithinSchedule}`);
+    // Lock at exactly endTime (not available at endTime or after)
+    isWithinSchedule = currentTotalMinutes >= startTotalMinutes && currentTotalMinutes < endTotalMinutes;
+    console.log(`⏰ isSpecialItemActive: "${specialItem.name}" - Regular schedule check: ${currentTotalMinutes} >= ${startTotalMinutes} && ${currentTotalMinutes} < ${endTotalMinutes} = ${isWithinSchedule}`);
   }
-  
+
   if (!isWithinSchedule) {
     console.log(`⏰ isSpecialItemActive: "${specialItem.name}" - OUTSIDE schedule time, item is INACTIVE`);
     return false;
   }
-  
+
   console.log(`⏰ isSpecialItemActive: "${specialItem.name}" - WITHIN schedule time, item is ACTIVE`);
   return true;
 };
