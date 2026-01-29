@@ -4036,13 +4036,23 @@ const chatbot = {
           console.log(`📋 Today's special items:`, todaySpecialItems.map(i => i.name));
           
           // Find ALL matching special items (by name or tags)
-          matchingSpecialItems = todaySpecialItems.filter(item => 
+          const potentialMatches = todaySpecialItems.filter(item => 
             item.name.toLowerCase().includes(searchTerm) || 
             searchTerm.includes(item.name.toLowerCase()) ||
             (item.tags && item.tags.some(tag => tag.toLowerCase().includes(searchTerm)))
           );
           
-          console.log(`🔥 Matching special items:`, matchingSpecialItems.map(i => i.name));
+          // Validate each special item is currently active (within schedule)
+          for (const item of potentialMatches) {
+            const isActive = await isSpecialItemActive(item);
+            if (isActive) {
+              matchingSpecialItems.push(item);
+            } else {
+              console.log(`⏰ Special item "${item.name}" excluded - schedule inactive`);
+            }
+          }
+          
+          console.log(`🔥 Matching special items (active):`, matchingSpecialItems.map(i => i.name));
         }
         
         // Also search regular menu items using smartSearch (includes fuzzy matching)
@@ -4054,11 +4064,17 @@ const chatbot = {
         
         // If smartSearch also found special items, merge them with our special items search
         if (searchResult && searchResult.specialItems && searchResult.specialItems.length > 0) {
-          // Merge special items, avoiding duplicates
+          // Validate and merge special items, avoiding duplicates
           const existingIds = new Set(matchingSpecialItems.map(i => i._id.toString()));
           for (const item of searchResult.specialItems) {
             if (!existingIds.has(item._id.toString())) {
-              matchingSpecialItems.push(item);
+              // Validate this special item is currently active
+              const isActive = await isSpecialItemActive(item);
+              if (isActive) {
+                matchingSpecialItems.push(item);
+              } else {
+                console.log(`⏰ Special item "${item.name}" from smartSearch excluded - schedule inactive`);
+              }
             }
           }
           console.log(`🔥 Total special items after merge:`, matchingSpecialItems.map(i => i.name));
@@ -4276,7 +4292,13 @@ const chatbot = {
         isPaused: { $ne: true }
       }).sort({ sortOrder: 1, createdAt: -1 });
       
-      activeSpecialItems = todaySpecialItems;
+      // Validate each special item is currently active
+      for (const item of todaySpecialItems) {
+        const isActive = await isSpecialItemActive(item);
+        if (isActive) {
+          activeSpecialItems.push(item);
+        }
+      }
     }
 
     // Also get menu items marked as today's special (legacy support)
@@ -4570,17 +4592,21 @@ const chatbot = {
         isPaused: { $ne: true }
       });
       
-      // Determine food type filter from label
-      let foodTypeFilter = null;
-      if (label.includes('Veg') && !label.includes('Non-Veg')) foodTypeFilter = 'veg';
-      else if (label.includes('Non-Veg')) foodTypeFilter = 'nonveg';
-      else if (label.includes('Egg')) foodTypeFilter = 'egg';
-      
-      // Filter special items by food type if applicable
-      if (foodTypeFilter) {
-        activeSpecialItems = todaySpecialItems.filter(item => item.foodType === foodTypeFilter);
-      } else {
-        activeSpecialItems = todaySpecialItems;
+      // Validate each special item is currently active
+      for (const item of todaySpecialItems) {
+        const isActive = await isSpecialItemActive(item);
+        if (isActive) {
+          // Determine food type filter from label
+          let foodTypeFilter = null;
+          if (label.includes('Veg') && !label.includes('Non-Veg')) foodTypeFilter = 'veg';
+          else if (label.includes('Non-Veg')) foodTypeFilter = 'nonveg';
+          else if (label.includes('Egg')) foodTypeFilter = 'egg';
+          
+          // Filter by food type if applicable
+          if (!foodTypeFilter || item.foodType === foodTypeFilter) {
+            activeSpecialItems.push(item);
+          }
+        }
       }
     }
     
@@ -4754,7 +4780,7 @@ const chatbot = {
     // Get active special items
     let activeSpecialItems = [];
     if (isWithinSchedule) {
-      activeSpecialItems = await SpecialItem.find({
+      const todaySpecialItems = await SpecialItem.find({
         $or: [
           { days: currentDay },
           { day: currentDay }
@@ -4762,6 +4788,14 @@ const chatbot = {
         available: true,
         isPaused: { $ne: true }
       });
+      
+      // Validate each special item is currently active
+      for (const item of todaySpecialItems) {
+        const isActive = await isSpecialItemActive(item);
+        if (isActive) {
+          activeSpecialItems.push(item);
+        }
+      }
     }
 
     // Combine special items + menu items
@@ -4865,14 +4899,21 @@ const chatbot = {
         isPaused: { $ne: true }
       });
       
-      // Filter special items by tag keyword
+      // Filter special items by tag keyword and validate each is active
       const tagLower = tagKeyword.toLowerCase();
-      matchingSpecialItems = allSpecialItems.filter(item => {
+      for (const item of allSpecialItems) {
         const nameMatch = item.name.toLowerCase().includes(tagLower);
         const descMatch = item.description?.toLowerCase().includes(tagLower);
         const tagsMatch = item.tags?.some(tag => tag.toLowerCase().includes(tagLower));
-        return nameMatch || descMatch || tagsMatch;
-      });
+        
+        if (nameMatch || descMatch || tagsMatch) {
+          // Validate this special item is currently active
+          const isActive = await isSpecialItemActive(item);
+          if (isActive) {
+            matchingSpecialItems.push(item);
+          }
+        }
+      }
     }
 
     // Combine special items + menu items
@@ -5360,7 +5401,7 @@ const chatbot = {
     // Get active special items
     let activeSpecialItems = [];
     if (isWithinSchedule) {
-      activeSpecialItems = await SpecialItem.find({
+      const todaySpecialItems = await SpecialItem.find({
         $or: [
           { days: currentDay },
           { day: currentDay }
@@ -5368,6 +5409,14 @@ const chatbot = {
         available: true,
         isPaused: { $ne: true }
       });
+      
+      // Validate each special item is currently active
+      for (const item of todaySpecialItems) {
+        const isActive = await isSpecialItemActive(item);
+        if (isActive) {
+          activeSpecialItems.push(item);
+        }
+      }
     }
 
     // Combine special items + menu items
