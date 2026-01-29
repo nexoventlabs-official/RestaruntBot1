@@ -2190,6 +2190,61 @@ const chatbot = {
       await customer.save();
     }
 
+    // --- PATCH: If user sends a food/special item search as first message, allow search and show details even if not sent 'hi' ---
+    // If message is a search for a special item, run smartSearch and show details if found/active
+    const msgText = typeof message === 'string' ? message.toLowerCase().trim() : '';
+    if (!selectedId && msgText && !['hi','hello','start','hey'].includes(msgText)) {
+      // Try smartSearch for menu and special items
+      const allCategories = await Category.find({ isActive: true });
+      const allMenuItems = await MenuItem.find({ available: true });
+      // Use same menuItems filtering as main logic
+      const scheduledActiveCategories = allCategories.filter(c => c.schedule?.enabled && !c.isPaused && !c.isSoldOut).map(c => c.name);
+      const scheduledLockedCategories = allCategories.filter(c => c.schedule?.enabled && (c.isPaused || c.isSoldOut)).map(c => c.name);
+      const menuItems = allMenuItems.filter(item => {
+        const itemCategories = Array.isArray(item.category) ? item.category : [item.category];
+        const hasScheduledActiveCategory = itemCategories.some(cat => scheduledActiveCategories.includes(cat));
+        if (hasScheduledActiveCategory) return true;
+        const hasScheduledLockedCategory = itemCategories.some(cat => scheduledLockedCategories.includes(cat));
+        if (hasScheduledLockedCategory) return false;
+        const hasActiveNonScheduledCategory = itemCategories.some(cat => {
+          const category = allCategories.find(c => c.name === cat);
+          return category && !category.schedule?.enabled && !category.isPaused && !category.isSoldOut;
+        });
+        return hasActiveNonScheduledCategory;
+      });
+      const searchResult = await this.smartSearch(msgText, menuItems);
+      if (searchResult && (searchResult.specialItems?.length > 0 || searchResult.items?.length > 0)) {
+        // If special item found and active, show details immediately
+        if (searchResult.specialItems && searchResult.specialItems.length === 1) {
+          await this.sendSpecialItemDetails(phone, searchResult.specialItems[0]);
+          return;
+        }
+        // If regular item found, show details
+        if (searchResult.items && searchResult.items.length === 1) {
+          await this.sendItemDetailsForOrder(phone, searchResult.items[0]);
+          return;
+        }
+        // If multiple matches, show as list (optional: can be improved)
+        if ((searchResult.specialItems && searchResult.specialItems.length > 1) || (searchResult.items && searchResult.items.length > 1)) {
+          // Show a list of items to select (reuse existing logic if available)
+          const itemsList = [
+            ...(searchResult.specialItems || []),
+            ...(searchResult.items || [])
+          ];
+          const sections = [{
+            title: `Items matching "${msgText}"`,
+            rows: itemsList.slice(0, 10).map(item => ({
+              id: item.isSpecialItem ? `special_${item._id}` : `view_${item._id}`,
+              title: (item.isSpecialItem ? '🔥 ' : '') + item.name.substring(0, 22),
+              description: `₹${item.price} • ${item.foodType === 'veg' ? '🟢 Veg' : item.foodType === 'nonveg' ? '🔴 Non-Veg' : '🟡 Egg'}`
+            }))
+          }];
+          await whatsapp.sendList(phone, '🔍 Select Item', `Found ${itemsList.length} items. Please select one:`, 'View Items', sections, 'Tap to view details');
+          return;
+        }
+      }
+    }
+
     // Save WhatsApp contact for broadcast (non-blocking)
     whatsappBroadcast.addContact(phone, customer.name || senderName, new Date()).catch(err => {
       console.error('[Chatbot] Failed to save WhatsApp contact:', err.message);
