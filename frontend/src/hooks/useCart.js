@@ -45,7 +45,7 @@ export function useCart() {
     // Create a map for quick lookup
     const menuMap = new Map(menuItems.map(item => [item._id, item]));
 
-    // Update cart items with latest data
+    // Update cart items with latest data, including itemStatus and scheduleInfo
     setCart(prev => prev.map(cartItem => {
       const latestItem = menuMap.get(cartItem._id);
       if (latestItem) {
@@ -55,13 +55,15 @@ export function useCart() {
           price: latestItem.price,
           image: latestItem.image,
           unit: latestItem.unit || 'piece',
-          unitQty: latestItem.quantity || 1
+          unitQty: latestItem.quantity || 1,
+          itemStatus: latestItem.itemStatus,
+          scheduleInfo: latestItem.scheduleInfo
         };
       }
       return cartItem;
     }));
 
-    // Update wishlist items with latest data
+    // Update wishlist items with latest data, including itemStatus and scheduleInfo
     setWishlist(prev => prev.map(wishlistItem => {
       const latestItem = menuMap.get(wishlistItem._id);
       if (latestItem) {
@@ -71,7 +73,9 @@ export function useCart() {
           price: latestItem.price,
           image: latestItem.image,
           unit: latestItem.unit || 'piece',
-          unitQty: latestItem.quantity || 1
+          unitQty: latestItem.quantity || 1,
+          itemStatus: latestItem.itemStatus,
+          scheduleInfo: latestItem.scheduleInfo
         };
       }
       return wishlistItem;

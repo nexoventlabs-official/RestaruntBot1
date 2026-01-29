@@ -2222,36 +2222,52 @@ const chatbot = {
         return hasActiveNonScheduledCategory;
       });
       const searchResult = await this.smartSearch(msgText, menuItems);
-      if (searchResult && (searchResult.specialItems?.length > 0 || searchResult.items?.length > 0)) {
-        // If special item found and active, show details immediately
-        if (searchResult.specialItems && searchResult.specialItems.length === 1) {
-          await this.sendSpecialItemDetails(phone, searchResult.specialItems[0]);
-          return;
+        if (searchResult && (searchResult.specialItems?.length > 0 || searchResult.items?.length > 0)) {
+          // If special item found and active, show details immediately
+          if (searchResult.specialItems && searchResult.specialItems.length === 1) {
+            // Double-check real-time status before showing details
+            const specialItem = searchResult.specialItems[0];
+            if (await this.isSpecialItemActive(specialItem)) {
+              await this.sendSpecialItemDetails(phone, specialItem);
+            } else {
+              await whatsapp.sendButtons(phone, `❌ Sorry, "${specialItem.name}" is not available right now.`, [
+                { id: 'view_menu', text: 'View Menu' },
+                { id: 'home', text: 'Main Menu' }
+              ]);
+            }
+            return;
+          }
+          // If regular item found, show details
+          if (searchResult.items && searchResult.items.length === 1) {
+            await this.sendItemDetailsForOrder(phone, searchResult.items[0]);
+            return;
+          }
+          // If multiple matches, show as list (optional: can be improved)
+          if ((searchResult.specialItems && searchResult.specialItems.length > 1) || (searchResult.items && searchResult.items.length > 1)) {
+            // Only include special items that are still active
+            const itemsList = [
+              ...((searchResult.specialItems || []).filter(async item => await this.isSpecialItemActive(item))),
+              ...(searchResult.items || [])
+            ];
+            if (itemsList.length === 0) {
+              await whatsapp.sendButtons(phone, `❌ No available items found for "${msgText}".`, [
+                { id: 'view_menu', text: 'View Menu' },
+                { id: 'home', text: 'Main Menu' }
+              ]);
+              return;
+            }
+            const sections = [{
+              title: `Items matching "${msgText}"`,
+              rows: itemsList.slice(0, 10).map(item => ({
+                id: item.isSpecialItem ? `special_${item._id}` : `view_${item._id}`,
+                title: (item.isSpecialItem ? '🔥 ' : '') + item.name.substring(0, 22),
+                description: `₹${item.price} • ${item.foodType === 'veg' ? '🟢 Veg' : item.foodType === 'nonveg' ? '🔴 Non-Veg' : '🟡 Egg'}`
+              }))
+            }];
+            await whatsapp.sendList(phone, '🔍 Select Item', `Found ${itemsList.length} items. Please select one:`, 'View Items', sections, 'Tap to view details');
+            return;
+          }
         }
-        // If regular item found, show details
-        if (searchResult.items && searchResult.items.length === 1) {
-          await this.sendItemDetailsForOrder(phone, searchResult.items[0]);
-          return;
-        }
-        // If multiple matches, show as list (optional: can be improved)
-        if ((searchResult.specialItems && searchResult.specialItems.length > 1) || (searchResult.items && searchResult.items.length > 1)) {
-          // Show a list of items to select (reuse existing logic if available)
-          const itemsList = [
-            ...(searchResult.specialItems || []),
-            ...(searchResult.items || [])
-          ];
-          const sections = [{
-            title: `Items matching "${msgText}"`,
-            rows: itemsList.slice(0, 10).map(item => ({
-              id: item.isSpecialItem ? `special_${item._id}` : `view_${item._id}`,
-              title: (item.isSpecialItem ? '🔥 ' : '') + item.name.substring(0, 22),
-              description: `₹${item.price} • ${item.foodType === 'veg' ? '🟢 Veg' : item.foodType === 'nonveg' ? '🔴 Non-Veg' : '🟡 Egg'}`
-            }))
-          }];
-          await whatsapp.sendList(phone, '🔍 Select Item', `Found ${itemsList.length} items. Please select one:`, 'View Items', sections, 'Tap to view details');
-          return;
-        }
-      }
     }
 
     // Save WhatsApp contact for broadcast (non-blocking)
