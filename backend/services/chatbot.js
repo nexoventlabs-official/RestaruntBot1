@@ -101,35 +101,14 @@ const checkCartAvailability = async (cart) => {
     .filter(c => c.schedule?.enabled && (c.isPaused || c.isSoldOut))
     .map(c => c.name);
   
-  // Get current time for special item schedule checks
-  const now = new Date();
-  const currentDay = now.getDay();
-  const currentHours = now.getHours();
-  const currentMinutes = now.getMinutes();
-  const currentTotalMinutes = currentHours * 60 + currentMinutes;
-
-  // Get global schedule for today
-  const todayGlobalSchedule = await DaySchedule.findOne({ day: currentDay });
-  
-  // Check if within global schedule
-  let isWithinSchedule = true;
-  if (todayGlobalSchedule && todayGlobalSchedule.startTime && todayGlobalSchedule.endTime) {
-    const [startHours, startMins] = todayGlobalSchedule.startTime.split(':').map(Number);
-    const [endHours, endMins] = todayGlobalSchedule.endTime.split(':').map(Number);
-    const startTotalMinutes = startHours * 60 + startMins;
-    const endTotalMinutes = endHours * 60 + endMins;
-    if (endTotalMinutes < startTotalMinutes) {
-      isWithinSchedule = currentTotalMinutes >= startTotalMinutes || currentTotalMinutes <= endTotalMinutes;
-    } else {
-      isWithinSchedule = currentTotalMinutes >= startTotalMinutes && currentTotalMinutes <= endTotalMinutes;
-    }
-  }
+  console.log('🛒 checkCartAvailability: Checking cart with', cart.length, 'items');
   
   for (const cartItem of cart) {
     // Handle special items
     if (cartItem.specialItem || cartItem.isSpecialItem) {
       const specialItem = await SpecialItem.findById(cartItem.specialItem);
       if (!specialItem) {
+        console.log(`🛒 Special item not found in DB:`, cartItem.specialItem);
         unavailableItems.push({ 
           name: cartItem.name || 'Unknown special item', 
           reason: 'deleted',
@@ -138,38 +117,21 @@ const checkCartAvailability = async (cart) => {
         continue;
       }
       
-      // Check if special item is available
-      if (!specialItem.available || specialItem.isPaused) {
-        unavailableItems.push({ 
-          name: specialItem.name, 
-          reason: 'unavailable',
-          isSpecialItem: true 
-        });
-        continue;
-      }
+      console.log(`🛒 Checking special item: ${specialItem.name}`);
       
-      // Check if special item is scheduled for today
-      const itemDays = specialItem.days && specialItem.days.length > 0 ? specialItem.days : [specialItem.day];
-      if (!itemDays.includes(currentDay)) {
-        unavailableItems.push({ 
-          name: specialItem.name, 
-          reason: 'not_scheduled_today',
-          isSpecialItem: true 
-        });
-        continue;
-      }
-      
-      // Check if within schedule time
-      if (!isWithinSchedule) {
+      // Use isSpecialItemActive to check availability (includes schedule check)
+      const isActive = await isSpecialItemActive(specialItem);
+      if (!isActive) {
+        console.log(`🛒 Special item "${specialItem.name}" is NOT active`);
         unavailableItems.push({ 
           name: specialItem.name, 
           reason: 'schedule_ended',
-          isSpecialItem: true,
-          schedule: todayGlobalSchedule 
+          isSpecialItem: true 
         });
         continue;
       }
       
+      console.log(`🛒 Special item "${specialItem.name}" is ACTIVE and available`);
       // Special items are available if they pass all checks
       continue;
     }
@@ -209,6 +171,11 @@ const checkCartAvailability = async (cart) => {
     if (!hasActiveNonScheduledCategory) {
       unavailableItems.push({ name: menuItem.name, reason: 'category_paused' });
     }
+  }
+  
+  console.log(`🛒 checkCartAvailability result: ${unavailableItems.length} unavailable items`);
+  if (unavailableItems.length > 0) {
+    console.log('🛒 Unavailable items:', unavailableItems.map(i => i.name));
   }
   
   return {
