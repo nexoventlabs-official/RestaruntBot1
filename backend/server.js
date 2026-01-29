@@ -25,6 +25,7 @@ const settingsRoutes = require('./routes/settings');
 const orderScheduler = require('./services/orderScheduler');
 const dailyCleanup = require('./services/dailyCleanup');
 const categoryScheduler = require('./services/categoryScheduler');
+const specialItemScheduler = require('./services/specialItemScheduler');
 const orderCleanup = require('./services/orderCleanup');
 const cartCleanup = require('./services/cartCleanup');
 
@@ -62,6 +63,7 @@ mongoose.connect(process.env.MONGODB_URI)
     orderScheduler.start();
     dailyCleanup.start();
     categoryScheduler.start();
+    specialItemScheduler.start();
     orderCleanup.start();
     cartCleanup.startCartCleanupScheduler();
   })

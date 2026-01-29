@@ -83,18 +83,44 @@ router.get('/today/active', async (req, res) => {
       isPaused: { $ne: true }
     }).sort({ sortOrder: 1, createdAt: -1 });
 
-    // Add schedule info to each item
-    const itemsWithStatus = todayItems.map(item => {
-      const itemObj = serializeSpecialItem(item);
-      itemObj.isActive = true;
-      itemObj.todaySchedule = todayGlobalSchedule ? {
-        startTime: todayGlobalSchedule.startTime,
-        endTime: todayGlobalSchedule.endTime
-      } : null;
-      return itemObj;
-    });
+    // Filter items based on per-item schedule or global schedule
+    const activeItems = [];
+    for (const item of todayItems) {
+      let itemIsWithinSchedule = isWithinSchedule; // Default to global schedule
 
-    res.json(itemsWithStatus);
+      // Check if item has per-day schedule
+      if (item.daySchedules && item.daySchedules.has(String(currentDay))) {
+        const perDaySchedule = item.daySchedules.get(String(currentDay));
+        if (perDaySchedule && perDaySchedule.startTime && perDaySchedule.endTime) {
+          const [startHours, startMins] = perDaySchedule.startTime.split(':').map(Number);
+          const [endHours, endMins] = perDaySchedule.endTime.split(':').map(Number);
+          
+          const startTotalMinutes = startHours * 60 + startMins;
+          const endTotalMinutes = endHours * 60 + endMins;
+
+          // Handle overnight schedules
+          if (endTotalMinutes < startTotalMinutes) {
+            itemIsWithinSchedule = currentTotalMinutes >= startTotalMinutes || currentTotalMinutes < endTotalMinutes;
+          } else {
+            // Lock at exactly endTime (not available at endTime or after)
+            itemIsWithinSchedule = currentTotalMinutes >= startTotalMinutes && currentTotalMinutes < endTotalMinutes;
+          }
+        }
+      }
+
+      // Only include items that are within schedule
+      if (itemIsWithinSchedule) {
+        const itemObj = serializeSpecialItem(item);
+        itemObj.isActive = true;
+        itemObj.todaySchedule = todayGlobalSchedule ? {
+          startTime: todayGlobalSchedule.startTime,
+          endTime: todayGlobalSchedule.endTime
+        } : null;
+        activeItems.push(itemObj);
+      }
+    }
+
+    res.json(activeItems);
   } catch (error) {
     console.error('Error fetching active special items:', error);
     res.status(500).json({ error: 'Failed to fetch active special items' });
@@ -138,20 +164,46 @@ router.get('/today', async (req, res) => {
       ]
     }).sort({ sortOrder: 1, createdAt: -1 });
 
-    // Add lock status to each item based on global schedule
+    // Add lock status to each item based on per-item schedule or global schedule
     const itemsWithStatus = todayItems.map(item => {
       const itemObj = serializeSpecialItem(item);
 
-      // Item is locked if: not available, is paused, or outside global schedule time
-      itemObj.isLocked = !item.available || item.isPaused || !isWithinSchedule;
-      itemObj.isActive = item.available && !item.isPaused && isWithinSchedule;
-      itemObj.todaySchedule = todayGlobalSchedule ? {
-        startTime: todayGlobalSchedule.startTime,
-        endTime: todayGlobalSchedule.endTime
+      // Check if item has per-day schedule
+      let itemIsWithinSchedule = isWithinSchedule; // Default to global schedule
+      let itemSchedule = todayGlobalSchedule;
+
+      if (item.daySchedules && item.daySchedules.has(String(currentDay))) {
+        // Use per-item schedule if available
+        const perDaySchedule = item.daySchedules.get(String(currentDay));
+        if (perDaySchedule && perDaySchedule.startTime && perDaySchedule.endTime) {
+          const [startHours, startMins] = perDaySchedule.startTime.split(':').map(Number);
+          const [endHours, endMins] = perDaySchedule.endTime.split(':').map(Number);
+          
+          const startTotalMinutes = startHours * 60 + startMins;
+          const endTotalMinutes = endHours * 60 + endMins;
+
+          // Handle overnight schedules
+          if (endTotalMinutes < startTotalMinutes) {
+            itemIsWithinSchedule = currentTotalMinutes >= startTotalMinutes || currentTotalMinutes < endTotalMinutes;
+          } else {
+            // Lock at exactly endTime (not available at endTime or after)
+            itemIsWithinSchedule = currentTotalMinutes >= startTotalMinutes && currentTotalMinutes < endTotalMinutes;
+          }
+          
+          itemSchedule = perDaySchedule;
+        }
+      }
+
+      // Item is locked if: not available, is paused, or outside schedule time
+      itemObj.isLocked = !item.available || item.isPaused || !itemIsWithinSchedule;
+      itemObj.isActive = item.available && !item.isPaused && itemIsWithinSchedule;
+      itemObj.todaySchedule = itemSchedule ? {
+        startTime: itemSchedule.startTime,
+        endTime: itemSchedule.endTime
       } : null;
       itemObj.lockReason = !item.available ? 'unavailable' : 
                            item.isPaused ? 'paused' : 
-                           !isWithinSchedule ? 'outside_schedule' : null;
+                           !itemIsWithinSchedule ? 'outside_schedule' : null;
       
       return itemObj;
     });
