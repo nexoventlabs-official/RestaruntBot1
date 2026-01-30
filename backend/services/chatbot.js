@@ -2200,7 +2200,11 @@ const chatbot = {
     // --- PATCH: If user sends a food/special item search as first message, allow search and show details even if not sent 'hi' ---
     // If message is a search for a special item, run smartSearch and show details if found/active
     const msgText = typeof message === 'string' ? message.toLowerCase().trim() : '';
-    if (!selectedId && msgText && !['hi','hello','start','hey'].includes(msgText)) {
+    
+    // IMPORTANT: Skip smart search if this is a cart order from website
+    const isCartOrder = msgText && (msgText.includes('order from website') || msgText.includes('cart order'));
+    
+    if (!selectedId && msgText && !['hi','hello','start','hey'].includes(msgText) && !isCartOrder) {
       // Try smartSearch for menu and special items
       const allCategories = await Category.find({ isActive: true });
       const allMenuItems = await MenuItem.find({ available: true });
