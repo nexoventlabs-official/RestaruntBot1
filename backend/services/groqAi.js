@@ -283,42 +283,44 @@ If already standard or you're unsure, return as is.`
       const completion = await client.chat.completions.create({
         messages: [{
           role: 'system',
-          content: `You are a restaurant menu tag generator for INDIAN customers. Generate EXACTLY 7 SIMPLE, SEARCHABLE tags that Indian customers would actually use to search for this food item.
+          content: `You are a restaurant menu tag generator for INDIAN customers. Generate EXACTLY 10 SIMPLE, SINGLE-WORD tags that Indian customers would use to search for this food item.
 
-CRITICAL RULES FOR INDIAN CUSTOMERS:
-1. Generate EXACTLY 7 tags, no more, no less
-2. Use SIMPLE, COMMON words that Indians use daily (not complicated English words)
-3. Include HINDI/TELUGU/TAMIL words if commonly used (dosa, idli, biryani, masala, curry, fry, etc.)
-4. Include main ingredient (chicken, paneer, mutton, fish, egg, dal, rice, roti, etc.)
-5. Include cooking style ONLY if obvious (fried, grilled, curry, gravy, dry, spicy, etc.)
-6. Include meal time if relevant (breakfast, tiffin, lunch, dinner, snack)
-7. Include popular search terms Indians use (veg, nonveg, spicy, tasty, special, etc.)
-8. ALL tags must be lowercase, single words (preferred) or max 2 words
-9. NO complicated words like "appetizer", "continental", "preparation"
-10. NO generic words like "food", "item", "dish", "delicious"
+CRITICAL RULES:
+1. Generate EXACTLY 10 tags, no more, no less
+2. ALL tags MUST be SINGLE WORDS ONLY (no phrases like "egg dosa", "chicken biryani")
+3. NO DUPLICATE or REDUNDANT tags (if item is "Egg Dosa", use "egg" and "dosa" separately, NOT "egg dosa")
+4. Use SIMPLE, COMMON words that Indians search with
+5. Include words from the item name (split into individual words)
+6. Include main ingredient as single word (chicken, paneer, mutton, fish, egg, dal, rice, roti)
+7. Include cooking style as single word (fried, grilled, curry, gravy, spicy, crispy, masala)
+8. Include meal time as single word (breakfast, tiffin, lunch, dinner, snack)
+9. Include food type (veg, nonveg, vegetarian)
+10. ALL tags must be lowercase, SINGLE WORDS ONLY
+11. NO complicated words, NO phrases, NO combinations
 
-EXAMPLES OF GOOD TAGS (simple, searchable):
-- Chicken Biryani → chicken, biryani, rice, spicy, nonveg, lunch, hyderabadi
-- Masala Dosa → dosa, masala, breakfast, crispy, south indian, tiffin, veg
-- Paneer Butter Masala → paneer, butter, masala, curry, veg, north indian, dinner
-- Egg Fried Rice → egg, rice, fried, chinese, dinner, spicy, nonveg
-- Idli Sambar → idli, sambar, breakfast, tiffin, south indian, soft, veg
+EXAMPLES OF GOOD TAGS (all single words):
+- Chicken Biryani → chicken, biryani, rice, spicy, nonveg, lunch, hyderabadi, tasty, hot, special
+- Egg Dosa → egg, dosa, breakfast, crispy, tiffin, morning, south, indian, tasty, hot
+- Paneer Butter Masala → paneer, butter, masala, curry, veg, dinner, north, indian, creamy, rich
+- Curd Rice → curd, rice, lunch, dinner, cool, soft, veg, south, indian, simple
 
-EXAMPLES OF BAD TAGS (too complicated):
-- "appetizer", "preparation", "continental", "delectable", "scrumptious"
+EXAMPLES OF BAD TAGS (phrases/combinations - NEVER do this):
+- "egg dosa", "chicken biryani", "paneer butter", "curd rice", "fried rice"
 
-Return ONLY comma-separated tags, nothing else.`
+Return ONLY comma-separated SINGLE WORDS, nothing else.`
         }, {
           role: 'user',
-          content: `Generate exactly 7 SIMPLE, SEARCHABLE tags for Indian customers:
+          content: `Generate exactly 10 SIMPLE, SINGLE-WORD tags for Indian customers:
 Item Name: "${itemName}"
 Category: ${categoryText}
 Food Type: ${foodTypeText}
 
+Remember: ONLY single words, NO phrases, NO combinations like "egg dosa" or "chicken biryani"
+
 Tags:`
         }],
         model: 'llama-3.1-8b-instant',
-        max_tokens: 100,
+        max_tokens: 150,
         temperature: 0.3
       });
       
@@ -332,21 +334,22 @@ Tags:`
         .map(tag => tag.trim().toLowerCase())
         .filter(tag => 
           tag.length > 1 && 
-          tag.length < 25 && 
+          tag.length < 20 && 
           !tag.includes(':') && 
           !tag.includes('.') &&
           !tag.includes('tag') &&
-          !tag.match(/^\d+$/) // Remove pure numbers
+          !tag.match(/^\d+$/) && // Remove pure numbers
+          !tag.includes(' ') // ONLY single words, no phrases
         );
       
       // Remove duplicates
       tags = [...new Set(tags)];
       
-      // If we don't have exactly 7 tags, add SIMPLE fallback tags
-      if (tags.length < 7) {
+      // If we don't have exactly 10 tags, add SIMPLE, SINGLE-WORD fallback tags
+      if (tags.length < 10) {
         const fallbackTags = [];
         
-        // Add simple words from item name (avoid complicated words)
+        // Add simple SINGLE words from item name (split by spaces)
         const nameWords = itemName
           .toLowerCase()
           .replace(/[^a-z0-9\s]/gi, ' ')
@@ -354,104 +357,148 @@ Tags:`
           .filter(word => word.length > 2 && !['the', 'and', 'with', 'for'].includes(word));
         fallbackTags.push(...nameWords);
         
-        // Add simple category words
+        // Add simple SINGLE words from category
         const categoryWords = categories
-          .map(c => c.toLowerCase().trim())
-          .filter(c => c.length > 2);
+          .flatMap(c => c.toLowerCase().trim().split(/\s+/))
+          .filter(c => c.length > 2 && !['the', 'and', 'with', 'for'].includes(c));
         fallbackTags.push(...categoryWords);
         
-        // Add food type
+        // Add food type as single word
         if (foodType && foodType !== 'none') {
           fallbackTags.push(foodType);
+          if (foodType === 'veg') fallbackTags.push('vegetarian');
+          if (foodType === 'nonveg') fallbackTags.push('nonvegetarian', 'meat');
         }
         
-        // Add SIMPLE, COMMON tags based on category (what Indians actually search for)
+        // Add SIMPLE, SINGLE-WORD tags based on category
         const categoryLower = categoryText.toLowerCase();
         
         // Rice dishes
         if (categoryLower.includes('biryani')) {
-          fallbackTags.push('rice', 'spicy', 'lunch');
+          fallbackTags.push('rice', 'spicy', 'lunch', 'dinner', 'hot', 'tasty');
         } else if (categoryLower.includes('rice')) {
-          fallbackTags.push('rice', 'lunch', 'dinner');
+          fallbackTags.push('rice', 'lunch', 'dinner', 'grain', 'meal');
         }
         
         // Breakfast/Tiffin
         if (categoryLower.includes('breakfast') || categoryLower.includes('tiffin')) {
-          fallbackTags.push('breakfast', 'tiffin', 'morning');
+          fallbackTags.push('breakfast', 'tiffin', 'morning', 'early', 'fresh');
         }
         
         // Dosa/Idli
         if (categoryLower.includes('dosa')) {
-          fallbackTags.push('dosa', 'crispy', 'south indian');
+          fallbackTags.push('dosa', 'crispy', 'south', 'indian', 'tiffin');
         } else if (categoryLower.includes('idli')) {
-          fallbackTags.push('idli', 'soft', 'south indian');
+          fallbackTags.push('idli', 'soft', 'south', 'indian', 'steamed');
         }
         
         // Curry/Gravy
         if (categoryLower.includes('curry') || categoryLower.includes('gravy')) {
-          fallbackTags.push('curry', 'gravy', 'spicy');
+          fallbackTags.push('curry', 'gravy', 'spicy', 'sauce', 'wet');
         }
         
         // Fry/Fried
         if (categoryLower.includes('fry') || categoryLower.includes('fried')) {
-          fallbackTags.push('fried', 'crispy', 'spicy');
+          fallbackTags.push('fried', 'crispy', 'spicy', 'crunchy', 'hot');
         }
         
         // Chinese
         if (categoryLower.includes('chinese') || categoryLower.includes('noodles') || categoryLower.includes('manchurian')) {
-          fallbackTags.push('chinese', 'spicy', 'fried');
+          fallbackTags.push('chinese', 'spicy', 'fried', 'asian', 'indo');
         }
         
         // Roti/Bread
         if (categoryLower.includes('roti') || categoryLower.includes('naan') || categoryLower.includes('parotta')) {
-          fallbackTags.push('roti', 'bread', 'dinner');
+          fallbackTags.push('roti', 'bread', 'dinner', 'flat', 'wheat');
         }
         
         // Dessert/Sweet
         if (categoryLower.includes('dessert') || categoryLower.includes('sweet')) {
-          fallbackTags.push('sweet', 'dessert', 'tasty');
+          fallbackTags.push('sweet', 'dessert', 'tasty', 'sugar', 'treat');
         }
         
         // Beverage/Juice
         if (categoryLower.includes('beverage') || categoryLower.includes('juice') || categoryLower.includes('drink')) {
-          fallbackTags.push('drink', 'cold', 'fresh');
+          fallbackTags.push('drink', 'cold', 'fresh', 'liquid', 'beverage');
         }
         
         // Snacks
         if (categoryLower.includes('snack') || categoryLower.includes('starter')) {
-          fallbackTags.push('snack', 'tasty', 'crispy');
+          fallbackTags.push('snack', 'tasty', 'crispy', 'starter', 'bite');
         }
         
-        // Add fallback tags that aren't already in the list
+        // Chicken
+        if (categoryLower.includes('chicken')) {
+          fallbackTags.push('chicken', 'nonveg', 'meat', 'poultry', 'protein');
+        }
+        
+        // Mutton
+        if (categoryLower.includes('mutton') || categoryLower.includes('lamb')) {
+          fallbackTags.push('mutton', 'lamb', 'nonveg', 'meat', 'protein');
+        }
+        
+        // Fish/Seafood
+        if (categoryLower.includes('fish') || categoryLower.includes('prawn') || categoryLower.includes('seafood')) {
+          fallbackTags.push('fish', 'seafood', 'nonveg', 'protein', 'ocean');
+        }
+        
+        // Paneer
+        if (categoryLower.includes('paneer')) {
+          fallbackTags.push('paneer', 'veg', 'cheese', 'protein', 'cottage');
+        }
+        
+        // Add fallback tags that aren't already in the list (SINGLE WORDS ONLY)
         for (const tag of fallbackTags) {
-          if (!tags.includes(tag) && tags.length < 7) {
+          if (!tags.includes(tag) && tags.length < 10 && !tag.includes(' ')) {
+            tags.push(tag);
+          }
+        }
+        
+        // If still not enough, add generic single-word tags
+        const genericTags = ['tasty', 'special', 'fresh', 'spicy', 'hot', 'popular', 'best', 'delicious', 'yummy', 'good'];
+        for (const tag of genericTags) {
+          if (!tags.includes(tag) && tags.length < 10) {
             tags.push(tag);
           }
         }
       }
       
-      // Ensure exactly 7 tags
-      tags = tags.slice(0, 7);
+      // Ensure exactly 10 tags, all single words
+      tags = tags.filter(tag => !tag.includes(' ')).slice(0, 10);
       
-      console.log(`🏷️ Generated ${tags.length} tags for "${itemName}": ${tags.join(', ')}`);
+      console.log(`🏷️ Generated ${tags.length} single-word tags for "${itemName}": ${tags.join(', ')}`);
       return tags.join(', ');
     } catch (error) {
       console.error('Groq AI tags error:', error);
-      // Fallback: generate SIMPLE basic tags from item name and category
+      // Fallback: generate SIMPLE, SINGLE-WORD tags from item name and category
       const categories = Array.isArray(category) ? category : [category];
-      const nameWords = itemName.toLowerCase().replace(/[^a-z0-9\s]/gi, ' ').split(/\s+/).filter(w => w.length > 2);
-      const categoryWords = categories.map(c => c.toLowerCase().trim());
-      const fallbackTags = [...new Set([...nameWords, ...categoryWords])];
-      if (foodType && foodType !== 'none') fallbackTags.push(foodType);
       
-      // Pad to 7 tags with SIMPLE common words
-      const commonTags = ['tasty', 'special', 'fresh', 'spicy', 'hot', 'popular', 'best'];
+      // Split item name into single words
+      const nameWords = itemName.toLowerCase()
+        .replace(/[^a-z0-9\s]/gi, ' ')
+        .split(/\s+/)
+        .filter(w => w.length > 2);
+      
+      // Split category into single words
+      const categoryWords = categories
+        .flatMap(c => c.toLowerCase().trim().split(/\s+/))
+        .filter(c => c.length > 2);
+      
+      const fallbackTags = [...new Set([...nameWords, ...categoryWords])];
+      
+      if (foodType && foodType !== 'none') {
+        fallbackTags.push(foodType);
+      }
+      
+      // Pad to 10 tags with SIMPLE, SINGLE-WORD common words
+      const commonTags = ['tasty', 'special', 'fresh', 'spicy', 'hot', 'popular', 'best', 'delicious', 'yummy', 'good'];
       for (const tag of commonTags) {
-        if (fallbackTags.length >= 7) break;
+        if (fallbackTags.length >= 10) break;
         if (!fallbackTags.includes(tag)) fallbackTags.push(tag);
       }
       
-      return fallbackTags.slice(0, 7).join(', ');
+      // Ensure only single words
+      return fallbackTags.filter(tag => !tag.includes(' ')).slice(0, 10).join(', ');
     }
   },
 
