@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TextInput,
-  TouchableOpacity, Image, Alert, ActivityIndicator, Platform, StatusBar, Animated, KeyboardAvoidingView
+  TouchableOpacity, Image, Alert, ActivityIndicator, Platform, StatusBar, Animated, KeyboardAvoidingView, Modal, FlatList
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,6 +20,8 @@ const FOOD_TYPES = [
   { value: 'egg', label: 'Egg', color: '#F59E0B' },
 ];
 
+const UNITS = ['piece', 'plate', 'bowl', 'cup', 'slice', 'full', 'half', 'small', 'kg', 'gram', 'liter', 'ml', 'inch'];
+
 export default function SpecialItemFormScreen({ route, navigation }) {
   const existingItem = route.params?.item;
   const preselectedDay = route.params?.day !== undefined ? route.params.day : (existingItem?.day || new Date().getDay());
@@ -29,6 +31,8 @@ export default function SpecialItemFormScreen({ route, navigation }) {
   const [description, setDescription] = useState(existingItem?.description || '');
   const [price, setPrice] = useState(existingItem?.price?.toString() || '');
   const [originalPrice, setOriginalPrice] = useState(existingItem?.originalPrice?.toString() || '');
+  const [unit, setUnit] = useState(existingItem?.unit || 'piece');
+  const [quantity, setQuantity] = useState(existingItem?.quantity?.toString() || '1');
   const [selectedDays, setSelectedDays] = useState(
     existingItem?.days && existingItem.days.length > 0 
       ? existingItem.days 
@@ -43,6 +47,7 @@ export default function SpecialItemFormScreen({ route, navigation }) {
   const [aiLoading, setAiLoading] = useState(false);
   const [tagsAiLoading, setTagsAiLoading] = useState(false);
   const [tags, setTags] = useState(existingItem?.tags?.join(', ') || '');
+  const [showUnitPicker, setShowUnitPicker] = useState(false);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
@@ -151,6 +156,8 @@ export default function SpecialItemFormScreen({ route, navigation }) {
       formData.append('description', description);
       formData.append('price', price);
       if (originalPrice) formData.append('originalPrice', originalPrice);
+      formData.append('unit', unit);
+      formData.append('quantity', quantity);
       formData.append('days', JSON.stringify(selectedDays));
       formData.append('foodType', foodType);
       formData.append('tags', tags);
@@ -335,6 +342,28 @@ export default function SpecialItemFormScreen({ route, navigation }) {
                 </View>
               </View>
 
+              {/* Quantity & Unit */}
+              <View style={styles.rowInputs}>
+                <View style={[styles.inputGroup, { flex: 1 }]}>
+                  <Text style={styles.label}>Quantity</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={quantity}
+                    onChangeText={setQuantity}
+                    placeholder="1"
+                    placeholderTextColor="#9CA3AF"
+                    keyboardType="numeric"
+                  />
+                </View>
+                <View style={[styles.inputGroup, { flex: 1 }]}>
+                  <Text style={styles.label}>Unit</Text>
+                  <TouchableOpacity style={styles.pickerButton} onPress={() => setShowUnitPicker(true)}>
+                    <Text style={styles.pickerValue}>{unit}</Text>
+                    <Ionicons name="chevron-down" size={20} color="#9CA3AF" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
               {/* Day Selection */}
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Days <Text style={styles.required}>*</Text></Text>
@@ -445,6 +474,35 @@ export default function SpecialItemFormScreen({ route, navigation }) {
         </TouchableOpacity>
       </View>
 
+      {/* Unit Picker Modal */}
+      <Modal visible={showUnitPicker} animationType="slide" transparent={true} onRequestClose={() => setShowUnitPicker(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHandle} />
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Unit</Text>
+              <TouchableOpacity style={styles.modalCloseButton} onPress={() => setShowUnitPicker(false)}>
+                <Ionicons name="close" size={24} color="#696969" />
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={UNITS}
+              keyExtractor={(item) => item}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[styles.unitOption, unit === item && styles.unitOptionSelected]}
+                  onPress={() => { setUnit(item); setShowUnitPicker(false); }}
+                >
+                  <Text style={[styles.unitOptionText, unit === item && styles.unitOptionTextSelected]}>{item}</Text>
+                  {unit === item && <Ionicons name="checkmark-circle" size={22} color={ZOMATO_RED} />}
+                </TouchableOpacity>
+              )}
+              contentContainerStyle={styles.modalList}
+            />
+          </View>
+        </View>
+      </Modal>
+
       {/* Loading Overlay */}
       {loading && (
         <View style={styles.loadingOverlay}>
@@ -544,6 +602,17 @@ const styles = StyleSheet.create({
   },
   currencySymbol: { fontSize: 20, fontWeight: '700', color: ZOMATO_RED, marginRight: 8 },
   priceInput: { flex: 1, fontSize: 18, color: '#1C1C1C', fontWeight: '600' },
+  
+  // Row inputs
+  rowInputs: { flexDirection: 'row', gap: 14 },
+  
+  // Picker
+  pickerButton: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    backgroundColor: '#fff', borderRadius: 14, paddingHorizontal: 18, height: 54,
+    borderWidth: 1.5, borderColor: '#E8E8E8',
+  },
+  pickerValue: { fontSize: 15, color: '#1C1C1C', fontWeight: '500', textTransform: 'capitalize' },
   
   // Day Selection
   dayContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
@@ -689,5 +758,74 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#1C1C1C',
+  },
+  
+  // Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '70%',
+    paddingBottom: Platform.OS === 'ios' ? 34 : 16,
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#E8E8E8',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F5F5F5',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1C1C1C',
+  },
+  modalCloseButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F5F5F5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalList: {
+    paddingHorizontal: 20,
+  },
+  unitOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F5F5F5',
+  },
+  unitOptionSelected: {
+    backgroundColor: '#FEF2F2',
+  },
+  unitOptionText: {
+    fontSize: 16,
+    color: '#1C1C1C',
+    fontWeight: '500',
+    textTransform: 'capitalize',
+  },
+  unitOptionTextSelected: {
+    color: ZOMATO_RED,
+    fontWeight: '700',
   },
 });
