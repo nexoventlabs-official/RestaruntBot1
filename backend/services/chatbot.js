@@ -1758,6 +1758,9 @@ const chatbot = {
       // ========== CHECK FOR EXACT TAG MATCH (e.g., "rice" matches all items with "rice" tag) ==========
       
       console.log(`🔍 Searching for tags matching keywords: [${searchKeywords.join(', ')}]`);
+      console.log(`🔍 Total menu items to search: ${menuItems.length}`);
+      console.log(`🔍 Items with tags: ${menuItems.filter(i => i.tags && i.tags.length > 0).length}`);
+      console.log(`🔍 Items without tags: ${menuItems.filter(i => !i.tags || i.tags.length === 0).length}`);
       
       // First try: Find items where ALL keywords match tags exactly
       const allKeywordsMenuMatches = menuItems.filter(item => {
@@ -1771,15 +1774,13 @@ const chatbot = {
         const matches = searchKeywords.every(keyword => {
           const kwLower = keyword.toLowerCase();
           const kwNorm = normalizeForMatch(keyword);
-          const hasMatch = itemTagsLower.some(tag => tag === kwLower || tag.includes(kwLower) || kwLower.includes(tag)) ||
+          return itemTagsLower.some(tag => tag === kwLower || tag.includes(kwLower) || kwLower.includes(tag)) ||
                  itemTagsNorm.some(tagNorm => tagNorm === kwNorm || tagNorm.includes(kwNorm) || kwNorm.includes(tagNorm));
-          
-          if (hasMatch) {
-            console.log(`  ✓ "${item.name}" matches keyword "${keyword}" (tags: ${itemTagsLower.join(', ')})`);
-          }
-          return hasMatch;
         });
         
+        if (matches) {
+          console.log(`  ✓ "${item.name}" matches (tags: ${itemTagsLower.join(', ')})`);
+        }
         return matches;
       });
       
