@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import axios from 'axios';
+import api from '../api';
 import { Star, Plus, Minus, Heart, ShoppingCart, X, Clock, Package, Search, Tag } from 'lucide-react';
 import { useCachedData } from '../hooks/useImagePreloader';
 
@@ -241,35 +242,36 @@ export default function UserMenuPage() {
     addToCart(item); 
   };
 
-  const handleWhatsAppOrder = (item, e) => {
+  // WhatsApp order: send cart to backend, then open WhatsApp with a simple message
+  const handleWhatsAppOrder = async (item, e) => {
     e?.stopPropagation();
-    if (!isItemAvailable(item._id)) return;
-    
-    // Format food type
-    const foodTypeLabel = item.foodType === 'veg' ? '🌿 Veg' : 
-                          item.foodType === 'nonveg' ? '🍗 Non-Veg' : 
-                          item.foodType === 'egg' ? '🥚 Egg' : '';
-    
-    // Rating display with gold stars
-    let ratingDisplay = '';
-    if (item.totalRatings > 0) {
-      const fullStars = Math.floor(item.avgRating || 0);
-      const emptyStars = 5 - fullStars;
-      const goldStars = '★'.repeat(fullStars) + '☆'.repeat(emptyStars);
-      ratingDisplay = `${goldStars} ${item.avgRating} (${item.totalRatings} reviews)`;
-    } else {
-      ratingDisplay = '☆☆☆☆☆ No ratings yet';
+    if (!cart || !cart.length) return;
+    // Get user phone (ask or from context/localStorage)
+    let phone = localStorage.getItem('user_phone');
+    if (!phone) {
+      phone = prompt('Enter your WhatsApp number (with country code):');
+      if (!phone) return;
+      localStorage.setItem('user_phone', phone);
     }
-    
-    // Build message like chatbot format
-    let msg = `*${item.name}*${foodTypeLabel ? ` ${foodTypeLabel}` : ''}\n\n`;
-    msg += `${ratingDisplay}\n\n`;
-    msg += `💰 *Price:* ₹${item.price} / ${item.unitQty || 1} ${item.unit || 'piece'}\n`;
-    msg += `⏱️ *Prep Time:* ${item.preparationTime || 15} mins\n`;
-    if (item.tags?.length) msg += `🏷️ *Tags:* ${item.tags.join(', ')}\n`;
-    msg += `\n📝 ${item.description || 'Delicious dish prepared fresh!'}`;
-    
-    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
+    try {
+      await api.post('/whatsapp/add-to-cart', {
+        phone,
+        cart: cart.map(c => ({
+          ...c,
+          menuItem: c._id,
+          specialItemId: c.specialItemId,
+          isSpecialItem: c.isSpecialItem,
+          name: c.name,
+          price: c.price,
+          quantity: c.quantity
+        }))
+      });
+      // Open WhatsApp with a simple message
+      const msg = 'Hi! I have added items to my cart and want to order.';
+      window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
+    } catch (err) {
+      alert('Failed to sync cart to WhatsApp. Please try again.');
+    }
   };
 
   // Open item detail dialog
@@ -304,22 +306,37 @@ export default function UserMenuPage() {
   };
 
   // WhatsApp order from dialog with quantity
-  const handleDialogWhatsApp = () => {
+  // WhatsApp order from dialog: send cart to backend, then open WhatsApp
+  const handleDialogWhatsApp = async () => {
     if (!selectedItem) return;
-    const item = selectedItem;
-    
-    const foodTypeLabel = item.foodType === 'veg' ? '🌿 Veg' : 
-                          item.foodType === 'nonveg' ? '🍗 Non-Veg' : 
-                          item.foodType === 'egg' ? '🥚 Egg' : '';
-    
-    let msg = `Hi! I'd like to order:\n\n`;
-    msg += `*${item.name}*${foodTypeLabel ? ` ${foodTypeLabel}` : ''}\n`;
-    msg += `📦 *Quantity:* ${dialogQuantity}\n`;
-    msg += `💰 *Price:* ₹${item.price} x ${dialogQuantity} = ₹${item.price * dialogQuantity}\n`;
-    msg += `\nPlease confirm my order. Thank you!`;
-    
-    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
-    closeItemDialog();
+    // Add selected item with dialogQuantity to cart for WhatsApp sync
+    let phone = localStorage.getItem('user_phone');
+    if (!phone) {
+      phone = prompt('Enter your WhatsApp number (with country code):');
+      if (!phone) return;
+      localStorage.setItem('user_phone', phone);
+    }
+    try {
+      await api.post('/whatsapp/add-to-cart', {
+        phone,
+        cart: [
+          {
+            ...selectedItem,
+            menuItem: selectedItem._id,
+            specialItemId: selectedItem.specialItemId,
+            isSpecialItem: selectedItem.isSpecialItem,
+            name: selectedItem.name,
+            price: selectedItem.price,
+            quantity: dialogQuantity
+          }
+        ]
+      });
+      const msg = 'Hi! I have added items to my cart and want to order.';
+      window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
+      closeItemDialog();
+    } catch (err) {
+      alert('Failed to sync cart to WhatsApp. Please try again.');
+    }
   };
 
   const filteredCategories = [...new Set(displayItems.flatMap(i => Array.isArray(i.category) ? i.category : [i.category]))]

@@ -28,6 +28,7 @@ const categoryScheduler = require('./services/categoryScheduler');
 const specialItemScheduler = require('./services/specialItemScheduler');
 const orderCleanup = require('./services/orderCleanup');
 const cartCleanup = require('./services/cartCleanup');
+const whatsappCartRoutes = require('./routes/whatsappCart');
 
 const app = express();
 
@@ -86,6 +87,7 @@ app.use('/api/hero-sections', heroSectionRoutes);
 app.use('/api/offers', offersRoutes);
 app.use('/api/whatsapp-broadcast', whatsappBroadcastRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/whatsapp', whatsappCartRoutes);
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
