@@ -1651,11 +1651,9 @@ const chatbot = {
     }
 
     // Always fetch and validate special items in real time for every search
+    // IMPORTANT: Fetch ALL special items first, then filter by schedule
+    // This allows users to search for special items by name even if not scheduled for today
     const allSpecialItemsForToday = await SpecialItem.find({
-      $or: [
-        { days: currentDay },
-        { day: currentDay }
-      ],
       available: true,
       isPaused: { $ne: true }
     });

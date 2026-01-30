@@ -320,8 +320,9 @@ export default function TodaySpecial() {
               return (
                 <div
                   key={item._id}
+                  onClick={() => available && openItemDetail(item)}
                   className={`group bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 ${
-                    !available ? 'opacity-70' : ''
+                    !available ? 'opacity-70' : 'cursor-pointer'
                   }`}
                 >
                   {/* Image Section */}
@@ -433,14 +434,20 @@ export default function TodaySpecial() {
                         {inCart ? (
                           <div className="flex-1 flex items-center justify-center gap-3 bg-orange-50 rounded-xl py-2">
                             <button
-                              onClick={() => updateQuantity?.(item._id || item.specialItemId, cartQty - 1)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                updateQuantity?.(item._id || item.specialItemId, cartQty - 1);
+                              }}
                               className="p-1.5 rounded-lg bg-white shadow-sm hover:bg-gray-50"
                             >
                               <Minus className="w-4 h-4 text-gray-600" />
                             </button>
                             <span className="font-bold text-orange-500 w-8 text-center">{cartQty}</span>
                             <button
-                              onClick={() => updateQuantity?.(item._id || item.specialItemId, cartQty + 1)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                updateQuantity?.(item._id || item.specialItemId, cartQty + 1);
+                              }}
                               className="p-1.5 rounded-lg bg-white shadow-sm hover:bg-gray-50"
                             >
                               <Plus className="w-4 h-4 text-gray-600" />
@@ -448,7 +455,16 @@ export default function TodaySpecial() {
                           </div>
                         ) : (
                           <button
-                            onClick={() => openItemDetail(item)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (!addToCart) return;
+                              const specialCartItem = {
+                                ...item,
+                                isSpecialItem: true,
+                                specialItemId: item._id
+                              };
+                              addToCart(specialCartItem);
+                            }}
                             className="flex-1 flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-xl font-semibold transition-all shadow-lg shadow-orange-500/30"
                           >
                             <Plus className="w-5 h-5" />
@@ -458,7 +474,20 @@ export default function TodaySpecial() {
                         
                         {/* WhatsApp Quick Order */}
                         <button
-                          onClick={() => openItemDetail(item)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const foodTypeLabel = item.foodType === 'veg' ? '🌿 Veg' : 
+                                                  item.foodType === 'nonveg' ? '🍗 Non-Veg' : 
+                                                  item.foodType === 'egg' ? '🥚 Egg' : '';
+                            
+                            let msg = `Hi! I'd like to order from Today's Special:\n\n`;
+                            msg += `🔥 *${item.name}*\n`;
+                            msg += `${foodTypeLabel}\n`;
+                            msg += `💰 Price: ₹${item.price}\n`;
+                            msg += `\nPlease confirm my order!`;
+                            
+                            window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
+                          }}
                           className="p-3 bg-green-500 hover:bg-green-600 text-white rounded-xl transition-all shadow-lg shadow-green-500/30"
                         >
                           <WhatsAppIcon className="w-5 h-5" />
@@ -483,55 +512,90 @@ export default function TodaySpecial() {
 
       {/* Item Detail Dialog */}
       {selectedItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={closeItemDetail}>
+        <div 
+          className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center"
+          style={{ touchAction: 'none' }}
+          onClick={closeItemDetail}
+          onTouchMove={(e) => e.preventDefault()}
+        >
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          
+          {/* Dialog - Horizontal on PC, Vertical on Mobile */}
           <div 
-            className="bg-white rounded-3xl max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl"
-            onClick={e => e.stopPropagation()}
+            className="relative bg-white rounded-t-3xl sm:rounded-3xl w-full max-w-md lg:max-w-5xl max-h-[90vh] sm:max-h-[95vh] lg:h-[85vh] overflow-hidden shadow-2xl flex flex-col lg:flex-row"
+            onClick={(e) => e.stopPropagation()}
           >
-            {/* Image */}
-            <div className="relative aspect-video">
+            {/* Close Button */}
+            <button
+              onClick={closeItemDetail}
+              className="absolute top-3 right-3 z-10 bg-white/90 hover:bg-white text-gray-700 p-2 rounded-full shadow-lg transition-all hover:scale-110"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Left Side - Image (PC) / Top (Mobile) */}
+            <div className="relative h-40 sm:h-56 lg:h-auto lg:w-[45%] bg-gradient-to-br from-orange-50 to-orange-100 flex items-center justify-center flex-shrink-0">
               {selectedItem.image ? (
-                <img
-                  src={selectedItem.image}
+                <img 
+                  src={selectedItem.image} 
                   alt={selectedItem.name}
-                  className="w-full h-full object-cover"
+                  className="max-h-full max-w-full object-contain p-4 sm:p-6 lg:p-8"
                 />
               ) : (
-                <div className="w-full h-full bg-gradient-to-br from-orange-100 to-orange-200 flex items-center justify-center">
-                  <Flame className="w-20 h-20 text-orange-300" />
+                <span className="text-6xl sm:text-7xl lg:text-8xl">🔥</span>
+              )}
+              
+              {/* Food Type Badge */}
+              {selectedItem.foodType && (
+                <div className="absolute top-3 left-3">
+                  <FoodTypeBadge type={selectedItem.foodType} size="lg" />
                 </div>
               )}
               
-              {/* Close Button */}
-              <button
-                onClick={closeItemDetail}
-                className="absolute top-4 right-4 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-all"
-              >
-                <X className="w-5 h-5" />
-              </button>
-              
               {/* Fire Badge */}
-              <div className="absolute bottom-4 left-4">
-                <span className="inline-flex items-center gap-1 px-4 py-2 rounded-full bg-orange-500 text-white font-medium shadow-lg">
-                  <Flame className="w-5 h-5" />
+              <div className="absolute bottom-3 left-3">
+                <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-orange-500 text-white text-sm font-medium shadow-lg">
+                  <Flame className="w-4 h-4" />
                   Today's Special
                 </span>
               </div>
             </div>
-            
-            {/* Content */}
-            <div className="p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900">{selectedItem.name}</h2>
-                  <FoodTypeBadge type={selectedItem.foodType} size="lg" />
-                </div>
+
+            {/* Right Side - Details (PC) / Bottom (Mobile) - Scrollable */}
+            <div 
+              className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8" 
+              style={{ 
+                WebkitOverflowScrolling: 'touch',
+                overscrollBehavior: 'contain'
+              }}
+              onTouchStart={(e) => e.stopPropagation()}
+              onTouchMove={(e) => e.stopPropagation()}
+              onWheel={(e) => e.stopPropagation()}
+            >
+              {/* Name */}
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 flex-1">{selectedItem.name}</h2>
               </div>
-              
-              {selectedItem.description && (
-                <p className="text-gray-600 mb-4">{selectedItem.description}</p>
-              )}
-              
+
+              {/* Price */}
+              <div className="flex items-center gap-3 mb-3 flex-wrap">
+                {/* Current Price - Large and prominent */}
+                <div className="text-3xl sm:text-4xl lg:text-5xl font-bold text-orange-500">
+                  ₹{selectedItem.price}
+                </div>
+                
+                {/* Original Price & Discount Badge - Only if there's a discount */}
+                {selectedItem.originalPrice && selectedItem.originalPrice > selectedItem.price && (
+                  <>
+                    <span className="text-lg sm:text-xl text-gray-400 line-through">₹{selectedItem.originalPrice}</span>
+                    <div className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-bold">
+                      {Math.round((1 - selectedItem.price / selectedItem.originalPrice) * 100)}% OFF
+                    </div>
+                  </>
+                )}
+              </div>
+
               {/* Tags */}
               {selectedItem.tags && selectedItem.tags.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-4">
@@ -542,62 +606,56 @@ export default function TodaySpecial() {
                   ))}
                 </div>
               )}
-              
-              {/* Price */}
-              <div className="flex items-baseline gap-3 mb-6">
-                <span className="text-3xl font-bold text-orange-500">₹{selectedItem.price}</span>
-                {selectedItem.originalPrice && selectedItem.originalPrice > selectedItem.price && (
-                  <>
-                    <span className="text-lg text-gray-400 line-through">₹{selectedItem.originalPrice}</span>
-                    <span className="px-2 py-1 bg-green-100 text-green-600 text-sm font-semibold rounded-full">
-                      {Math.round((1 - selectedItem.price / selectedItem.originalPrice) * 100)}% OFF
-                    </span>
-                  </>
-                )}
-              </div>
-              
+
+              {/* Description */}
+              {selectedItem.description && (
+                <p className="text-gray-600 text-sm sm:text-base lg:text-base mb-4 leading-relaxed">
+                  {selectedItem.description}
+                </p>
+              )}
+
               {/* Quantity Selector */}
-              <div className="flex items-center justify-between bg-gray-50 rounded-2xl p-4 mb-6">
+              <div className="flex items-center justify-between bg-gray-50 rounded-xl p-3 mb-5">
                 <span className="font-medium text-gray-700">Quantity</span>
-                <div className="flex items-center gap-4">
-                  <button
+                <div className="flex items-center gap-3">
+                  <button 
                     onClick={() => setDialogQuantity(Math.max(1, dialogQuantity - 1))}
-                    className="p-2 rounded-xl bg-white shadow-sm hover:bg-gray-100 transition-all"
+                    className="w-9 h-9 bg-white border border-gray-200 rounded-lg flex items-center justify-center hover:bg-gray-100 transition-colors"
                   >
-                    <Minus className="w-5 h-5 text-gray-600" />
+                    <Minus className="w-4 h-4" />
                   </button>
-                  <span className="text-xl font-bold text-gray-900 w-8 text-center">{dialogQuantity}</span>
-                  <button
+                  <span className="w-8 text-center font-bold text-lg">{dialogQuantity}</span>
+                  <button 
                     onClick={() => setDialogQuantity(dialogQuantity + 1)}
-                    className="p-2 rounded-xl bg-white shadow-sm hover:bg-gray-100 transition-all"
+                    className="w-9 h-9 bg-white border border-gray-200 rounded-lg flex items-center justify-center hover:bg-gray-100 transition-colors"
                   >
-                    <Plus className="w-5 h-5 text-gray-600" />
+                    <Plus className="w-4 h-4" />
                   </button>
                 </div>
               </div>
-              
-              {/* Total */}
-              <div className="flex items-center justify-between mb-6 p-4 bg-orange-50 rounded-2xl">
-                <span className="font-medium text-gray-700">Total</span>
-                <span className="text-2xl font-bold text-orange-500">
-                  ₹{selectedItem.price * dialogQuantity}
-                </span>
+
+              {/* Total Price */}
+              <div className="flex items-center justify-between mb-5 pb-4 border-b border-gray-100">
+                <span className="text-gray-600">Total</span>
+                <span className="text-2xl font-bold text-gray-900">₹{selectedItem.price * dialogQuantity}</span>
               </div>
-              
+
               {/* Action Buttons */}
               <div className="flex gap-3">
                 <button
+                  onClick={handleWhatsAppOrder}
+                  className="flex-1 flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white py-3 px-4 rounded-xl font-semibold transition-colors"
+                >
+                  <WhatsAppIcon className="w-5 h-5" />
+                  <span>WhatsApp</span>
+                </button>
+
+                <button
                   onClick={handleAddToCart}
-                  className="flex-1 flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 text-white py-4 rounded-2xl font-semibold transition-all shadow-lg shadow-orange-500/30"
+                  className="flex-[2] flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 text-white py-3 px-4 rounded-xl font-semibold transition-colors"
                 >
                   <ShoppingCart className="w-5 h-5" />
                   Add to Cart
-                </button>
-                <button
-                  onClick={handleWhatsAppOrder}
-                  className="flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white px-6 py-4 rounded-2xl font-semibold transition-all shadow-lg shadow-green-500/30"
-                >
-                  <WhatsAppIcon className="w-5 h-5" />
                 </button>
               </div>
             </div>
