@@ -2225,56 +2225,47 @@ const chatbot = {
       });
       const searchResult = await this.smartSearch(msgText, menuItems);
         if (searchResult && (searchResult.specialItems?.length > 0 || searchResult.items?.length > 0)) {
-          // If special item found and active, show details immediately
-          if (searchResult.specialItems && searchResult.specialItems.length === 1) {
-            // Double-check real-time status before showing details
-            const specialItem = searchResult.specialItems[0];
-            if (await isSpecialItemActive(specialItem)) {
-              await this.sendSpecialItemDetails(phone, specialItem);
-            } else {
-              await whatsapp.sendButtons(phone, `❌ Sorry, "${specialItem.name}" is not available right now.`, [
-                { id: 'view_menu', text: 'View Menu' },
-                { id: 'home', text: 'Main Menu' }
-              ]);
-            }
-            return;
-          }
-          // If regular item found, show details
-          if (searchResult.items && searchResult.items.length === 1) {
-            await this.sendItemDetailsForOrder(phone, searchResult.items[0]);
-            return;
-          }
-          // If multiple matches, show as list (optional: can be improved)
-          if ((searchResult.specialItems && searchResult.specialItems.length > 1) || (searchResult.items && searchResult.items.length > 1)) {
-            // Only include special items that are still active
-            const activeSpecialItems = [];
-            if (searchResult.specialItems) {
-              for (const item of searchResult.specialItems) {
-                if (await isSpecialItemActive(item)) {
-                  activeSpecialItems.push(item);
-                }
+          // Validate special items are still active
+          const activeSpecialItems = [];
+          if (searchResult.specialItems) {
+            for (const item of searchResult.specialItems) {
+              if (await isSpecialItemActive(item)) {
+                activeSpecialItems.push(item);
               }
             }
-            const itemsList = [
-              ...activeSpecialItems,
-              ...(searchResult.items || [])
-            ];
-            if (itemsList.length === 0) {
-              await whatsapp.sendButtons(phone, `❌ No available items found for "${msgText}".`, [
-                { id: 'view_menu', text: 'View Menu' },
-                { id: 'home', text: 'Main Menu' }
-              ]);
-              return;
+          }
+          
+          const regularItems = searchResult.items || [];
+          const totalMatches = activeSpecialItems.length + regularItems.length;
+          
+          // If ONLY ONE item matches (special or regular), show details directly
+          if (totalMatches === 1) {
+            if (activeSpecialItems.length === 1) {
+              await this.sendSpecialItemDetails(phone, activeSpecialItems[0]);
+            } else {
+              await this.sendItemDetailsForOrder(phone, regularItems[0]);
             }
-            const sections = [{
-              title: `Items matching "${msgText}"`,
-              rows: itemsList.slice(0, 10).map(item => ({
-                id: item.isSpecialItem ? `special_${item._id}` : `view_${item._id}`,
-                title: (item.isSpecialItem ? '🔥 ' : '') + item.name.substring(0, 22),
-                description: `₹${item.price} • ${item.foodType === 'veg' ? '🟢 Veg' : item.foodType === 'nonveg' ? '🔴 Non-Veg' : '🟡 Egg'}`
-              }))
-            }];
-            await whatsapp.sendList(phone, '🔍 Select Item', `Found ${itemsList.length} items. Please select one:`, 'View Items', sections, 'Tap to view details');
+            return;
+          }
+          
+          // If multiple matches, show ALL matching items in list format
+          if (totalMatches > 1) {
+            const itemsList = [
+              ...activeSpecialItems.map(item => ({ ...item.toObject ? item.toObject() : item, isSpecialItem: true })),
+              ...regularItems.map(item => ({ ...item.toObject ? item.toObject() : item, isSpecialItem: false }))
+            ];
+            
+            // Use sendCombinedSearchResults for better formatting
+            await this.sendCombinedSearchResults(phone, activeSpecialItems, regularItems, msgText);
+            return;
+          }
+          
+          // No active items found
+          if (totalMatches === 0) {
+            await whatsapp.sendButtons(phone, `❌ No available items found for "${msgText}".`, [
+              { id: 'view_menu', text: 'View Menu' },
+              { id: 'home', text: 'Main Menu' }
+            ]);
             return;
           }
         }

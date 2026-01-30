@@ -159,23 +159,56 @@ export default function UserMenuPage() {
     .map(cat => cat.name);
 
   // Show all items including unavailable ones
-  const displayItems = items.filter(item => {
-    const itemCategories = Array.isArray(item.category) ? item.category : [item.category];
-    // Item is shown if at least one of its categories exists
-    const hasCategory = itemCategories.some(cat => allCategoryNames.includes(cat));
-    
-    // Apply search filter
+  const displayItems = (() => {
+    // If there's a search query, search across ALL items (ignore category/foodType filters)
     if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      const matchesSearch = 
-        item.name.toLowerCase().includes(query) ||
-        item.description?.toLowerCase().includes(query) ||
-        item.tags?.some(tag => tag.toLowerCase().includes(query));
-      return hasCategory && matchesSearch;
+      const searchKeywords = searchQuery.toLowerCase().trim().split(/\s+/);
+      
+      // Search in allItems and calculate match score
+      const itemsWithScore = allItems.map(item => {
+        const itemCategories = Array.isArray(item.category) ? item.category : [item.category];
+        const hasCategory = itemCategories.some(cat => allCategoryNames.includes(cat));
+        
+        if (!hasCategory) return null;
+        
+        let matchScore = 0;
+        const itemName = item.name.toLowerCase();
+        const itemDesc = (item.description || '').toLowerCase();
+        const itemTags = (item.tags || []).map(tag => tag.toLowerCase());
+        const itemCategories = (Array.isArray(item.category) ? item.category : [item.category]).map(c => c.toLowerCase());
+        
+        // Check each search keyword
+        searchKeywords.forEach(keyword => {
+          // Exact name match = highest score
+          if (itemName === keyword) matchScore += 10;
+          // Name contains keyword
+          else if (itemName.includes(keyword)) matchScore += 5;
+          
+          // Tag exact match
+          if (itemTags.includes(keyword)) matchScore += 4;
+          // Tag contains keyword
+          else if (itemTags.some(tag => tag.includes(keyword))) matchScore += 2;
+          
+          // Category match
+          if (itemCategories.some(cat => cat.includes(keyword))) matchScore += 3;
+          
+          // Description match
+          if (itemDesc.includes(keyword)) matchScore += 1;
+        });
+        
+        return matchScore > 0 ? { ...item, matchScore } : null;
+      }).filter(item => item !== null);
+      
+      // Sort by match score (highest first)
+      return itemsWithScore.sort((a, b) => b.matchScore - a.matchScore);
     }
     
-    return hasCategory;
-  });
+    // No search query - use filtered items based on category/foodType
+    return items.filter(item => {
+      const itemCategories = Array.isArray(item.category) ? item.category : [item.category];
+      return itemCategories.some(cat => allCategoryNames.includes(cat));
+    });
+  })();
 
   // Get item status (available, soldout, or unavailable)
   const getItemStatus = (item) => {
@@ -835,6 +868,15 @@ export default function UserMenuPage() {
               </button>
             )}
           </div>
+          {/* Search Info Badge */}
+          {searchQuery.trim() && (
+            <div className="text-center mt-3">
+              <span className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-full text-sm font-medium">
+                <Search className="w-4 h-4" />
+                Searching across all items • {displayItems.length} result{displayItems.length !== 1 ? 's' : ''} found
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Items Grid */}
