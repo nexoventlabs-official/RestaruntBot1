@@ -2502,37 +2502,87 @@ const chatbot = {
         await customer.save();
         
         if (addedCount > 0) {
-          // Show confirmation message with cart image
-          const viewCartImageUrl = await chatbotImagesService.getImageUrl('view_cart');
-          
-          let confirmMsg = `✅ *Your items added to cart!* 🛒\n\n`;
-          confirmMsg += `Added ${addedCount} item${addedCount > 1 ? 's' : ''} from website:\n\n`;
-          
-          // List the added items
-          for (const cartItem of cartOrder.items) {
-            const foundInCart = customer.cart.find(c => {
-              if (c.name) return c.name.toLowerCase().includes(cartItem.name.toLowerCase());
-              if (c.menuItem) return c.menuItem.name?.toLowerCase().includes(cartItem.name.toLowerCase());
-              if (c.specialItem) return c.specialItem.name?.toLowerCase().includes(cartItem.name.toLowerCase());
-              return false;
-            });
-            if (foundInCart) {
-              const itemName = foundInCart.name || foundInCart.menuItem?.name || foundInCart.specialItem?.name || cartItem.name;
-              const isSpecial = foundInCart.isSpecialItem || foundInCart.specialItem;
-              confirmMsg += `${isSpecial ? '🔥 ' : ''}${itemName} x${cartItem.quantity}\n`;
+          try {
+            // Refresh customer to get populated cart items
+            const freshCustomer = await Customer.findOne({ phone })
+              .populate('cart.menuItem')
+              .populate('cart.specialItem');
+            
+            // Show confirmation message with cart image
+            const viewCartImageUrl = await chatbotImagesService.getImageUrl('view_cart');
+            
+            let confirmMsg = `✅ *Your items added to cart!* 🛒\n\n`;
+            confirmMsg += `Added ${addedCount} item${addedCount > 1 ? 's' : ''} from website:\n\n`;
+            
+            // List the added items with proper names from database
+            for (const cartItem of cartOrder.items) {
+              // Find the item in the refreshed cart
+              const foundInCart = freshCustomer.cart.find(c => {
+                // Check by name for special items
+                if (c.name && c.name.toLowerCase().includes(cartItem.name.toLowerCase())) {
+                  return true;
+                }
+                // Check by menuItem name
+                if (c.menuItem && c.menuItem.name && c.menuItem.name.toLowerCase().includes(cartItem.name.toLowerCase())) {
+                  return true;
+                }
+                // Check by specialItem name
+                if (c.specialItem && c.specialItem.name && c.specialItem.name.toLowerCase().includes(cartItem.name.toLowerCase())) {
+                  return true;
+                }
+                return false;
+              });
+              
+              if (foundInCart) {
+                const itemName = foundInCart.name || foundInCart.menuItem?.name || foundInCart.specialItem?.name || cartItem.name;
+                const isSpecial = foundInCart.isSpecialItem || foundInCart.specialItem;
+                confirmMsg += `${isSpecial ? '🔥 ' : ''}${itemName} x${cartItem.quantity}\n`;
+              } else {
+                // Fallback to cart item name if not found
+                confirmMsg += `${cartItem.isSpecialItem ? '🔥 ' : ''}${cartItem.name} x${cartItem.quantity}\n`;
+              }
             }
+            
+            confirmMsg += `\n📦 View your complete cart below!`;
+            
+            console.log('📤 Sending confirmation message:', confirmMsg);
+            console.log('📸 Image URL:', viewCartImageUrl);
+            
+            // Send confirmation with image
+            await sendWithOptionalImage(phone, viewCartImageUrl, confirmMsg, [
+              { id: 'view_cart', text: 'View Cart' },
+              { id: 'add_more_items', text: 'Add More Items' },
+              { id: 'home', text: 'Main Menu' }
+            ]);
+            
+            console.log('✅ Confirmation message sent successfully');
+            
+            state.currentStep = 'main_menu';
+            customer.conversationState = state;
+            await customer.save();
+          } catch (error) {
+            console.error('❌ Error sending confirmation:', error);
+            console.error('Error stack:', error.stack);
+            
+            // Fallback: send simple text message without image
+            try {
+              await whatsapp.sendButtons(phone, 
+                `✅ *Your items added to cart!* 🛒\n\n${addedCount} item${addedCount > 1 ? 's' : ''} added from website.\n\nClick below to view your cart.`,
+                [
+                  { id: 'view_cart', text: 'View Cart' },
+                  { id: 'add_more_items', text: 'Add More Items' },
+                  { id: 'home', text: 'Main Menu' }
+                ]
+              );
+              console.log('✅ Fallback message sent successfully');
+            } catch (fallbackError) {
+              console.error('❌ Fallback message also failed:', fallbackError);
+            }
+            
+            state.currentStep = 'main_menu';
+            customer.conversationState = state;
+            await customer.save();
           }
-          
-          confirmMsg += `\n📦 View your complete cart below!`;
-          
-          // Send confirmation with image
-          await sendWithOptionalImage(phone, viewCartImageUrl, confirmMsg, [
-            { id: 'view_cart', text: 'View Cart' },
-            { id: 'add_more_items', text: 'Add More Items' },
-            { id: 'home', text: 'Main Menu' }
-          ]);
-          
-          state.currentStep = 'main_menu';
         } else {
           // No items were added
           await whatsapp.sendButtons(phone, 
@@ -2543,6 +2593,8 @@ const chatbot = {
             ]
           );
           state.currentStep = 'main_menu';
+          customer.conversationState = state;
+          await customer.save();
         }
       }
       // ========== WEBSITE ORDER DETECTION (exact match on item name) ==========
