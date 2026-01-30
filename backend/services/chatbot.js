@@ -1700,45 +1700,61 @@ const chatbot = {
     // Helper to normalize text for comparison (removes spaces for flexible matching)
     const normalizeForMatch = (text) => text.toLowerCase().replace(/\s+/g, '');
     
+    // Split search into individual keywords (needed early for checking common ingredients)
+    const searchKeywords = primarySearchTerm.split(/\s+/).filter(k => k.length >= 2);
+    
+    // Common ingredient/generic words that should search by tags, not exact name
+    const commonIngredients = [
+      'rice', 'chicken', 'mutton', 'fish', 'prawn', 'egg', 'paneer', 'dal', 
+      'aloo', 'gobi', 'mushroom', 'roti', 'naan', 'parotta', 'dosa', 'idli',
+      'biryani', 'curry', 'fry', 'masala', 'gravy', 'soup', 'salad', 'juice'
+    ];
+    
     // ========== CHECK FOR EXACT NAME MATCH FIRST (MENU ITEMS + SPECIAL ITEMS) ==========
-    // If search term exactly matches item name(s) (with or without spaces), return ALL exact matches
+    // Skip exact name match for common ingredients - search by tags instead
+    // Only do exact name match for specific dish names (2+ words or not a common ingredient)
     if (hasSearchTerm) {
-      for (const searchTerm of uniqueSearchTerms) {
-        const searchLower = searchTerm.toLowerCase();
-        const searchNorm = normalizeForMatch(searchTerm);
-        
-        // Find ALL menu items with exact name match
-        const exactMenuMatches = menuItems.filter(item => {
-          const nameLower = item.name.toLowerCase();
-          const nameNorm = normalizeForMatch(item.name);
-          return nameLower === searchLower || nameNorm === searchNorm;
-        });
-        
-        // Find ALL special items with exact name match
-        const exactSpecialMatches = activeSpecialItems.filter(item => {
-          const nameLower = item.name.toLowerCase();
-          const nameNorm = normalizeForMatch(item.name);
-          return nameLower === searchLower || nameNorm === searchNorm;
-        });
-        
-        const totalExactMatches = exactMenuMatches.length + exactSpecialMatches.length;
-        
-        if (totalExactMatches > 0) {
-          console.log(`✅ Exact name match found: "${searchTerm}" → ${exactMenuMatches.length} menu + ${exactSpecialMatches.length} special item(s)`);
-          return { 
-            items: exactMenuMatches,
-            specialItems: exactSpecialMatches,
-            foodType: detected, 
-            searchTerm: searchTerm, 
-            label: null,
-            exactMatch: true 
-          };
+      const isCommonIngredient = searchKeywords.length === 1 && 
+                                 commonIngredients.includes(primarySearchTerm.toLowerCase());
+      
+      if (!isCommonIngredient) {
+        for (const searchTerm of uniqueSearchTerms) {
+          const searchLower = searchTerm.toLowerCase();
+          const searchNorm = normalizeForMatch(searchTerm);
+          
+          // Find ALL menu items with exact name match
+          const exactMenuMatches = menuItems.filter(item => {
+            const nameLower = item.name.toLowerCase();
+            const nameNorm = normalizeForMatch(item.name);
+            return nameLower === searchLower || nameNorm === searchNorm;
+          });
+          
+          // Find ALL special items with exact name match
+          const exactSpecialMatches = activeSpecialItems.filter(item => {
+            const nameLower = item.name.toLowerCase();
+            const nameNorm = normalizeForMatch(item.name);
+            return nameLower === searchLower || nameNorm === searchNorm;
+          });
+          
+          const totalExactMatches = exactMenuMatches.length + exactSpecialMatches.length;
+          
+          if (totalExactMatches > 0) {
+            console.log(`✅ Exact name match found: "${searchTerm}" → ${exactMenuMatches.length} menu + ${exactSpecialMatches.length} special item(s)`);
+            return { 
+              items: exactMenuMatches,
+              specialItems: exactSpecialMatches,
+              foodType: detected, 
+              searchTerm: searchTerm, 
+              label: null,
+              exactMatch: true 
+            };
+          }
         }
+      } else {
+        console.log(`🔍 "${primarySearchTerm}" is a common ingredient - searching by tags instead of exact name`);
       }
       
-      // ========== CHECK FOR EXACT TAG MATCH (e.g., "dosa" matches all items with "dosa" tag) ==========
-      // Split search into individual keywords
-      const searchKeywords = primarySearchTerm.split(/\s+/).filter(k => k.length >= 2);
+      // ========== CHECK FOR EXACT TAG MATCH (e.g., "rice" matches all items with "rice" tag) ==========
       
       // First try: Find items where ALL keywords match tags exactly
       const allKeywordsMenuMatches = menuItems.filter(item => {
