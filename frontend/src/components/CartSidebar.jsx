@@ -80,9 +80,41 @@ export default function CartSidebar({
     return encodeURIComponent(msg);
   };
 
-  const handleOrderAll = () => {
+  const handleOrderAll = async () => {
     if (availableCartItems.length === 0) return;
+    
+    // Generate WhatsApp message with cart items
     const msg = generateWhatsAppMessage();
+    
+    // Send cart screenshot to backend for chatbot
+    try {
+      // Capture cart data for chatbot
+      const cartData = {
+        items: availableCartItems.map(item => ({
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+          image: item.image,
+          isSpecialItem: item.isSpecialItem === true || item.isSpecialItem === 'true' || item.specialItemId
+        })),
+        total: availableCartTotal
+      };
+      
+      // Get API base URL from environment or use default
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://restaruntbot1.onrender.com/api';
+      
+      // Send to backend to store in chatbot images
+      await fetch(`${apiUrl}/chatbot-images/cart-snapshot`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cartData)
+      });
+    } catch (error) {
+      console.error('Failed to send cart snapshot:', error);
+      // Continue with WhatsApp order even if snapshot fails
+    }
+    
+    // Open WhatsApp with the message
     window.open(`https://wa.me/${whatsappNumber}?text=${msg}`, '_blank');
   };
 

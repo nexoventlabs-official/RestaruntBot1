@@ -2502,12 +2502,37 @@ const chatbot = {
         await customer.save();
         
         if (addedCount > 0) {
-          // Show cart summary and proceed to checkout
-          // Clear selected items to prevent stale selections
-          state.selectedItem = null;
-          state.selectedSpecialItem = null;
-          await this.sendCart(phone, customer);
-          state.currentStep = 'viewing_cart';
+          // Show confirmation message with cart image
+          const viewCartImageUrl = await chatbotImagesService.getImageUrl('view_cart');
+          
+          let confirmMsg = `✅ *Your items added to cart!* 🛒\n\n`;
+          confirmMsg += `Added ${addedCount} item${addedCount > 1 ? 's' : ''} from website:\n\n`;
+          
+          // List the added items
+          for (const cartItem of cartOrder.items) {
+            const foundInCart = customer.cart.find(c => {
+              if (c.name) return c.name.toLowerCase().includes(cartItem.name.toLowerCase());
+              if (c.menuItem) return c.menuItem.name?.toLowerCase().includes(cartItem.name.toLowerCase());
+              if (c.specialItem) return c.specialItem.name?.toLowerCase().includes(cartItem.name.toLowerCase());
+              return false;
+            });
+            if (foundInCart) {
+              const itemName = foundInCart.name || foundInCart.menuItem?.name || foundInCart.specialItem?.name || cartItem.name;
+              const isSpecial = foundInCart.isSpecialItem || foundInCart.specialItem;
+              confirmMsg += `${isSpecial ? '🔥 ' : ''}${itemName} x${cartItem.quantity}\n`;
+            }
+          }
+          
+          confirmMsg += `\n📦 View your complete cart below!`;
+          
+          // Send confirmation with image
+          await sendWithOptionalImage(phone, viewCartImageUrl, confirmMsg, [
+            { id: 'view_cart', text: 'View Cart' },
+            { id: 'add_more_items', text: 'Add More Items' },
+            { id: 'home', text: 'Main Menu' }
+          ]);
+          
+          state.currentStep = 'main_menu';
         } else {
           // No items were added
           await whatsapp.sendButtons(phone, 

@@ -267,7 +267,8 @@ export default function UserMenuPage() {
         }))
       });
       // Open WhatsApp with a simple message
-      const msg = 'Hi! I have added items to my cart and want to order.';
+      // Always send a simple trigger message, not item details
+      const msg = 'Hi! I want to order from my website cart.';
       window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
     } catch (err) {
       alert('Failed to sync cart to WhatsApp. Please try again.');
@@ -331,7 +332,8 @@ export default function UserMenuPage() {
           }
         ]
       });
-      const msg = 'Hi! I have added items to my cart and want to order.';
+      // Always send a simple trigger message, not item details
+      const msg = 'Hi! I want to order from my website cart.';
       window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
       closeItemDialog();
     } catch (err) {

@@ -467,4 +467,29 @@ router.post('/:key/reset', auth, async (req, res) => {
   }
 });
 
+// Cart snapshot endpoint - receives cart data from website and stores temporarily
+// This allows the chatbot to show "Your items added to cart" with the cart image
+router.post('/cart-snapshot', async (req, res) => {
+  try {
+    const { items, total } = req.body;
+    
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'Invalid cart data' });
+    }
+    
+    // Store cart snapshot in a temporary collection or cache
+    // For now, we'll just acknowledge receipt - the chatbot will handle showing the cart
+    console.log('📸 Cart snapshot received:', { itemCount: items.length, total });
+    
+    res.json({ 
+      success: true, 
+      message: 'Cart snapshot received',
+      itemCount: items.length 
+    });
+  } catch (error) {
+    console.error('Cart snapshot error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;
