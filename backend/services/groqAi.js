@@ -278,77 +278,120 @@ If already standard or you're unsure, return as is.`
       const client = getGroq();
       const categories = Array.isArray(category) ? category : [category];
       const categoryText = categories.join(', ');
-      const foodTypeText = foodType === 'veg' ? 'veg' : foodType === 'nonveg' ? 'nonveg' : foodType === 'egg' ? 'egg' : '';
-      
-      // Extract words from item name (split by space and special chars)
-      const nameWords = itemName
-        .toLowerCase()
-        .replace(/[^a-z0-9\s]/gi, ' ')
-        .split(/\s+/)
-        .filter(word => word.length > 1)
-        .map(word => word.trim());
-      
-      // Extract category words
-      const categoryWords = categories
-        .map(cat => cat.toLowerCase().trim())
-        .filter(cat => cat.length > 0);
-      
-      // Combine name words + category words as base tags
-      const baseTags = [...new Set([...nameWords, ...categoryWords])];
+      const foodTypeText = foodType === 'veg' ? 'vegetarian' : foodType === 'nonveg' ? 'non-vegetarian' : foodType === 'egg' ? 'egg' : '';
       
       const completion = await client.chat.completions.create({
         messages: [{
+          role: 'system',
+          content: `You are a restaurant menu tag generator. Generate EXACTLY 7 accurate, searchable tags for menu items.
+
+RULES:
+1. Generate EXACTLY 7 tags, no more, no less
+2. Tags must be highly relevant to the item name, category, and type
+3. Include variations of the item name (e.g., "biryani" → "biriyani", "briyani")
+4. Include main ingredients (chicken, paneer, mutton, fish, prawn, egg, dal, aloo, gobi, mushroom)
+5. Include taste/cooking style (spicy, mild, crispy, fried, grilled, tandoor, curry, gravy, dry)
+6. Include meal type (breakfast, lunch, dinner, snacks, appetizer, main course, dessert)
+7. Include cuisine type (south indian, north indian, chinese, continental, hyderabadi, punjabi)
+8. All tags must be lowercase, single words or short phrases (max 2 words)
+9. No generic words like "food", "item", "dish"
+10. Be specific and accurate to help customers find this item
+
+Return ONLY comma-separated tags, nothing else.`
+        }, {
           role: 'user',
-          content: `Generate 5-7 additional searchable tags for this Indian restaurant menu item. Only return extra tags that are NOT already in the base tags list.
-
-Item: "${itemName}"
+          content: `Generate exactly 7 tags for:
+Item Name: "${itemName}"
 Category: ${categoryText}
-Type: ${foodTypeText}
-Base tags (already included): ${baseTags.join(', ')}
+Food Type: ${foodTypeText}
 
-Add only these types of extra tags:
-- Main ingredient if not in name (chicken, paneer, dal, aloo, gobi, mutton, fish, prawn)
-- Taste/style (spicy, mild, hot, creamy, dry, crispy, fried, grilled, tandoor)
-- Cuisine type (south indian, north indian, punjabi, hyderabadi, chinese)
-- Meal type (breakfast, lunch, dinner, snacks)
-- Popular terms (special, popular, famous) if applicable
-
-Return ONLY comma-separated lowercase words. No sentences, no explanations.
-Example: spicy, crispy, popular, lunch, north indian`
+Tags:`
         }],
         model: 'llama-3.1-8b-instant',
         max_tokens: 100,
-        temperature: 0.5
+        temperature: 0.3
       });
       
-      const aiTagsText = completion.choices[0]?.message?.content?.trim() || '';
+      let tagsText = completion.choices[0]?.message?.content?.trim() || '';
       
-      // Clean AI generated tags
-      const aiTags = aiTagsText
-        .replace(/[\[\]"]/g, '')
+      // Clean and parse tags
+      let tags = tagsText
+        .replace(/[\[\]"']/g, '')
         .replace(/\n/g, ',')
         .split(',')
         .map(tag => tag.trim().toLowerCase())
-        .filter(tag => tag.length > 1 && tag.length < 20 && !tag.includes(':') && !tag.includes('.'));
+        .filter(tag => 
+          tag.length > 1 && 
+          tag.length < 25 && 
+          !tag.includes(':') && 
+          !tag.includes('.') &&
+          !tag.includes('tag') &&
+          !tag.match(/^\d+$/) // Remove pure numbers
+        );
       
-      // Combine base tags + AI tags + food type, remove duplicates
-      const allTags = [...baseTags];
-      if (foodTypeText) allTags.push(foodTypeText);
-      aiTags.forEach(tag => {
-        if (!allTags.includes(tag)) allTags.push(tag);
-      });
+      // Remove duplicates
+      tags = [...new Set(tags)];
       
-      // Limit to 15 tags max
-      return allTags.slice(0, 15).join(', ');
+      // If we don't have exactly 7 tags, add fallback tags
+      if (tags.length < 7) {
+        const fallbackTags = [];
+        
+        // Add item name words
+        const nameWords = itemName
+          .toLowerCase()
+          .replace(/[^a-z0-9\s]/gi, ' ')
+          .split(/\s+/)
+          .filter(word => word.length > 2);
+        fallbackTags.push(...nameWords);
+        
+        // Add categories
+        fallbackTags.push(...categories.map(c => c.toLowerCase().trim()));
+        
+        // Add food type
+        if (foodType && foodType !== 'none') {
+          fallbackTags.push(foodType);
+        }
+        
+        // Add common tags based on category
+        const categoryLower = categoryText.toLowerCase();
+        if (categoryLower.includes('biryani')) fallbackTags.push('rice', 'spicy');
+        if (categoryLower.includes('breakfast')) fallbackTags.push('morning', 'tiffin');
+        if (categoryLower.includes('curry')) fallbackTags.push('gravy', 'spicy');
+        if (categoryLower.includes('fry')) fallbackTags.push('crispy', 'fried');
+        if (categoryLower.includes('chinese')) fallbackTags.push('indo-chinese', 'spicy');
+        if (categoryLower.includes('dessert') || categoryLower.includes('sweet')) fallbackTags.push('sweet', 'dessert');
+        if (categoryLower.includes('beverage') || categoryLower.includes('juice')) fallbackTags.push('drink', 'refreshing');
+        
+        // Add fallback tags that aren't already in the list
+        for (const tag of fallbackTags) {
+          if (!tags.includes(tag) && tags.length < 7) {
+            tags.push(tag);
+          }
+        }
+      }
+      
+      // Ensure exactly 7 tags
+      tags = tags.slice(0, 7);
+      
+      console.log(`🏷️ Generated ${tags.length} tags for "${itemName}": ${tags.join(', ')}`);
+      return tags.join(', ');
     } catch (error) {
       console.error('Groq AI tags error:', error);
-      // Fallback: return item name words + categories if AI fails
+      // Fallback: generate basic tags from item name and category
       const categories = Array.isArray(category) ? category : [category];
-      const nameWords = itemName.toLowerCase().replace(/[^a-z0-9\s]/gi, ' ').split(/\s+/).filter(w => w.length > 1);
+      const nameWords = itemName.toLowerCase().replace(/[^a-z0-9\s]/gi, ' ').split(/\s+/).filter(w => w.length > 2);
       const categoryWords = categories.map(c => c.toLowerCase().trim());
       const fallbackTags = [...new Set([...nameWords, ...categoryWords])];
       if (foodType && foodType !== 'none') fallbackTags.push(foodType);
-      return fallbackTags.join(', ');
+      
+      // Pad to 7 tags if needed
+      const commonTags = ['popular', 'tasty', 'fresh', 'delicious', 'special'];
+      for (const tag of commonTags) {
+        if (fallbackTags.length >= 7) break;
+        if (!fallbackTags.includes(tag)) fallbackTags.push(tag);
+      }
+      
+      return fallbackTags.slice(0, 7).join(', ');
     }
   },
 
