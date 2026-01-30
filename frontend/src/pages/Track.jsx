@@ -39,7 +39,8 @@ const statusConfig = {
     label: 'Ready', 
     color: 'bg-purple-100 text-purple-700 border-purple-200', 
     iconColor: 'text-purple-500',
-    description: 'Ready for pickup/delivery' 
+    description: 'Ready for pickup/delivery',
+    pickupDescription: 'Ready for pickup - Come collect your order!'
   },
   out_for_delivery: { 
     icon: TruckIcon, 
@@ -53,7 +54,8 @@ const statusConfig = {
     label: 'Delivered', 
     color: 'bg-green-100 text-green-700 border-green-200', 
     iconColor: 'text-green-500',
-    description: 'Order delivered successfully' 
+    description: 'Order delivered successfully',
+    pickupDescription: 'Order completed - Thank you!'
   },
   cancelled: { 
     icon: XCircleIcon, 
@@ -76,6 +78,7 @@ const statusConfig = {
 };
 
 const statusOrder = ['pending', 'confirmed', 'preparing', 'ready', 'out_for_delivery', 'delivered'];
+const pickupStatusOrder = ['pending', 'confirmed', 'preparing', 'ready', 'delivered']; // No out_for_delivery for pickup
 
 export default function Track() {
   const { orderId } = useParams();
@@ -109,7 +112,9 @@ export default function Track() {
   };
 
   const getStatusIndex = (status) => {
-    const idx = statusOrder.indexOf(status);
+    const isPickup = order?.serviceType === 'pickup';
+    const orderFlow = isPickup ? pickupStatusOrder : statusOrder;
+    const idx = orderFlow.indexOf(status);
     return idx >= 0 ? idx : -1;
   };
 
@@ -148,6 +153,8 @@ export default function Track() {
   const StatusIcon = currentStatus.icon;
   const currentStatusIndex = getStatusIndex(order.status);
   const isCancelled = order.status === 'cancelled' || order.status === 'refunded';
+  const isPickup = order.serviceType === 'pickup';
+  const orderFlow = isPickup ? pickupStatusOrder : statusOrder;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -184,9 +191,13 @@ export default function Track() {
             </div>
             <div className="flex-1">
               <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold border ${currentStatus.color}`}>
-                {currentStatus.label}
+                {order.status === 'delivered' && isPickup ? 'Completed' : currentStatus.label}
               </span>
-              <p className="text-gray-600 mt-2">{currentStatus.description}</p>
+              <p className="text-gray-600 mt-2">
+                {isPickup && currentStatus.pickupDescription 
+                  ? currentStatus.pickupDescription 
+                  : currentStatus.description}
+              </p>
             </div>
           </div>
         </div>
@@ -194,14 +205,16 @@ export default function Track() {
         {/* Progress Tracker */}
         {!isCancelled && (
           <div className="bg-white rounded-2xl shadow-sm p-6">
-            <h3 className="font-semibold text-gray-900 mb-6">Order Progress</h3>
+            <h3 className="font-semibold text-gray-900 mb-6">
+              {isPickup ? 'Pickup Progress' : 'Order Progress'}
+            </h3>
             <div className="relative">
-              {statusOrder.map((status, index) => {
+              {orderFlow.map((status, index) => {
                 const config = statusConfig[status];
                 const Icon = config.icon;
                 const isCompleted = index < currentStatusIndex;
                 const isCurrent = index === currentStatusIndex;
-                const isLast = index === statusOrder.length - 1;
+                const isLast = index === orderFlow.length - 1;
                 
                 return (
                   <div key={status} className="flex items-start mb-6 last:mb-0">
@@ -227,7 +240,7 @@ export default function Track() {
                       <p className={`font-medium ${
                         isCompleted || isCurrent ? 'text-gray-900' : 'text-gray-400'
                       }`}>
-                        {config.label}
+                        {status === 'delivered' && isPickup ? 'Completed' : config.label}
                       </p>
                       {isCurrent && (
                         <p className="text-sm text-green-600 mt-1">Current status</p>
@@ -292,11 +305,17 @@ export default function Track() {
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-500">Service Type</span>
-              <span className="font-medium text-gray-900 capitalize">
-                {order.serviceType?.replace('_', ' ') || 'Delivery'}
+              <span className="font-medium text-gray-900 capitalize flex items-center gap-2">
+                {isPickup ? '🏪 Self-Pickup' : '🛵 Delivery'}
               </span>
             </div>
-            {order.deliveryAddress && (
+            {!isPickup && order.deliveryPartnerName && (
+              <div className="flex justify-between items-center">
+                <span className="text-gray-500">Delivery Partner</span>
+                <span className="font-medium text-gray-900">{order.deliveryPartnerName}</span>
+              </div>
+            )}
+            {!isPickup && order.deliveryAddress && (
               <div className="pt-3 border-t border-gray-100">
                 <div className="flex items-start gap-3">
                   <LocationIcon className="w-5 h-5 text-gray-400 mt-0.5" />
@@ -307,7 +326,7 @@ export default function Track() {
                 </div>
               </div>
             )}
-            {order.estimatedDeliveryTime && (
+            {!isPickup && order.estimatedDeliveryTime && (
               <div className="flex justify-between items-center">
                 <span className="text-gray-500">Estimated Delivery</span>
                 <span className="font-medium text-gray-900">
@@ -316,6 +335,14 @@ export default function Track() {
                     hour: '2-digit', minute: '2-digit' 
                   })}
                 </span>
+              </div>
+            )}
+            {isPickup && order.status === 'ready' && (
+              <div className="pt-3 border-t border-gray-100">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <p className="text-green-800 font-medium">✨ Your order is ready for pickup!</p>
+                  <p className="text-green-600 text-sm mt-1">Please come to the restaurant to collect your order.</p>
+                </div>
               </div>
             )}
           </div>

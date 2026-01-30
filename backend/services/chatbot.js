@@ -6467,6 +6467,15 @@ const chatbot = {
     
     if (isPickup) {
       msg += `Service: 🏪 *Self-Pickup*\n`;
+      if (order.status === 'ready') {
+        msg += `\n✨ *Your order is ready for pickup!*\n`;
+        msg += `Please come to the restaurant to collect your order.\n`;
+      }
+    } else {
+      msg += `Service: 🛵 *Delivery*\n`;
+      if (order.deliveryPartnerName) {
+        msg += `Delivery Partner: ${order.deliveryPartnerName}\n`;
+      }
     }
     
     msg += `\n━━━━━━━━━━━━━━━\n*Timeline:*\n\n`;

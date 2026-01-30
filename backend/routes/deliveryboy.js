@@ -596,6 +596,7 @@ router.get('/orders/my', verifyDeliveryToken, async (req, res) => {
     
     const orders = await Order.find({
       assignedTo: req.deliveryBoy._id,
+      serviceType: 'delivery', // Only show delivery orders, not pickup orders
       $or: [
         { status: { $in: ['preparing', 'ready', 'out_for_delivery'] } },
         { 
@@ -616,6 +617,7 @@ router.get('/orders/history', verifyDeliveryToken, async (req, res) => {
   try {
     const orders = await Order.find({
       assignedTo: req.deliveryBoy._id,
+      serviceType: 'delivery', // Only show delivery orders, not pickup orders
       status: { $in: ['delivered', 'cancelled'] }
     }).sort({ statusUpdatedAt: -1, deliveredAt: -1 }).limit(50);
     
@@ -634,15 +636,18 @@ router.get('/orders/stats', verifyDeliveryToken, async (req, res) => {
     const [todayDelivered, totalDelivered, activeOrders] = await Promise.all([
       Order.countDocuments({
         assignedTo: req.deliveryBoy._id,
+        serviceType: 'delivery', // Only count delivery orders
         status: 'delivered',
         deliveredAt: { $gte: today }
       }),
       Order.countDocuments({
         assignedTo: req.deliveryBoy._id,
+        serviceType: 'delivery', // Only count delivery orders
         status: 'delivered'
       }),
       Order.countDocuments({
         assignedTo: req.deliveryBoy._id,
+        serviceType: 'delivery', // Only count delivery orders
         status: { $in: ['ready', 'out_for_delivery'] }
       })
     ]);
@@ -710,6 +715,7 @@ router.get('/orders/history/filtered', verifyDeliveryToken, async (req, res) => 
     
     const orders = await Order.find({
       assignedTo: req.deliveryBoy._id,
+      serviceType: 'delivery', // Only show delivery orders, not pickup orders
       status: { $in: ['delivered', 'cancelled'] },
       ...dateFilter
     }).sort({ deliveredAt: -1, statusUpdatedAt: -1 }).limit(100);
@@ -738,9 +744,11 @@ router.get('/orders/:orderId', verifyDeliveryToken, async (req, res) => {
     const { orderId } = req.params;
     
     // Find order that is assigned to this delivery boy or was delivered by them
+    // Only show delivery orders, not pickup orders
     const order = await Order.findOne({
       orderId,
-      assignedTo: req.deliveryBoy._id
+      assignedTo: req.deliveryBoy._id,
+      serviceType: 'delivery'
     });
     
     if (!order) {
@@ -893,7 +901,8 @@ router.post('/orders/:orderId/out-for-delivery', verifyDeliveryToken, async (req
       {
         orderId,
         status: 'ready',
-        assignedTo: req.deliveryBoy._id
+        assignedTo: req.deliveryBoy._id,
+        serviceType: 'delivery' // Only delivery orders
       },
       {
         $set: { status: 'out_for_delivery' },
@@ -952,7 +961,8 @@ router.post('/orders/:orderId/delivered', verifyDeliveryToken, async (req, res) 
     const existingOrder = await Order.findOne({
       orderId,
       status: 'out_for_delivery',
-      assignedTo: req.deliveryBoy._id
+      assignedTo: req.deliveryBoy._id,
+      serviceType: 'delivery' // Only delivery orders
     });
     
     if (!existingOrder) {
@@ -985,7 +995,8 @@ router.post('/orders/:orderId/delivered', verifyDeliveryToken, async (req, res) 
       {
         orderId,
         status: 'out_for_delivery',
-        assignedTo: req.deliveryBoy._id
+        assignedTo: req.deliveryBoy._id,
+        serviceType: 'delivery' // Only delivery orders
       },
       {
         $set: {
@@ -1064,6 +1075,7 @@ router.post('/orders/:orderId/generate-qr', verifyDeliveryToken, async (req, res
       orderId,
       status: 'out_for_delivery',
       assignedTo: req.deliveryBoy._id,
+      serviceType: 'delivery', // Only delivery orders
       paymentMethod: 'cod'
     });
     
@@ -1134,7 +1146,8 @@ router.get('/orders/:orderId/check-payment', verifyDeliveryToken, async (req, re
     const order = await Order.findOne({
       orderId,
       status: 'out_for_delivery',
-      assignedTo: req.deliveryBoy._id
+      assignedTo: req.deliveryBoy._id,
+      serviceType: 'delivery' // Only delivery orders
     });
     
     if (!order) {
@@ -1157,7 +1170,8 @@ router.get('/orders/:orderId/check-payment', verifyDeliveryToken, async (req, re
           {
             orderId,
             status: 'out_for_delivery',
-            assignedTo: req.deliveryBoy._id
+            assignedTo: req.deliveryBoy._id,
+            serviceType: 'delivery' // Only delivery orders
           },
           {
             $set: {
