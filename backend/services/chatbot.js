@@ -2225,7 +2225,7 @@ const chatbot = {
           if (searchResult.specialItems && searchResult.specialItems.length === 1) {
             // Double-check real-time status before showing details
             const specialItem = searchResult.specialItems[0];
-            if (await this.isSpecialItemActive(specialItem)) {
+            if (await isSpecialItemActive(specialItem)) {
               await this.sendSpecialItemDetails(phone, specialItem);
             } else {
               await whatsapp.sendButtons(phone, `❌ Sorry, "${specialItem.name}" is not available right now.`, [
@@ -2243,8 +2243,16 @@ const chatbot = {
           // If multiple matches, show as list (optional: can be improved)
           if ((searchResult.specialItems && searchResult.specialItems.length > 1) || (searchResult.items && searchResult.items.length > 1)) {
             // Only include special items that are still active
+            const activeSpecialItems = [];
+            if (searchResult.specialItems) {
+              for (const item of searchResult.specialItems) {
+                if (await isSpecialItemActive(item)) {
+                  activeSpecialItems.push(item);
+                }
+              }
+            }
             const itemsList = [
-              ...((searchResult.specialItems || []).filter(async item => await this.isSpecialItemActive(item))),
+              ...activeSpecialItems,
               ...(searchResult.items || [])
             ];
             if (itemsList.length === 0) {
