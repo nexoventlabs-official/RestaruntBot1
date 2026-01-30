@@ -1087,37 +1087,79 @@ export default function AdminMenuScreen({ navigation, route }) {
               const isDeleting = deletingCategoryId === cat._id;
               const isScheduledLocked = cat.schedule?.enabled && cat.isPaused && !cat.isSoldOut;
 
+              // Double-tap handler for Android
+              let lastTap = 0;
+              const handleCategoryPress = () => {
+                if (Platform.OS === 'android') {
+                  const now = Date.now();
+                  const DOUBLE_TAP_DELAY = 300;
+                  
+                  if (now - lastTap < DOUBLE_TAP_DELAY) {
+                    // Double tap - toggle sold out
+                    showSoldOutOptions(cat);
+                    lastTap = 0;
+                  } else {
+                    // Single tap - select category
+                    lastTap = now;
+                    setSelectedCategory(cat.name);
+                  }
+                } else {
+                  // iOS - normal behavior
+                  setSelectedCategory(cat.name);
+                }
+              };
+
+              const handleCategoryLongPress = () => {
+                const scheduleTimeText = isScheduledLocked && cat.schedule?.enabled
+                  ? ` (${formatScheduleDisplay(cat.schedule)})`
+                  : '';
+                
+                if (Platform.OS === 'android') {
+                  // Android - show only Schedule, Edit, Delete
+                  Alert.alert(
+                    cat.name + (isScheduledLocked ? ' - SCHEDULED' + scheduleTimeText : ''),
+                    'What would you like to do?',
+                    [
+                      { text: 'Schedule', onPress: () => openScheduleModal(cat) },
+                      { text: 'Edit', onPress: () => openCategoryModal(cat) },
+                      { text: 'Delete', style: 'destructive', onPress: () => deleteCategory(cat) },
+                      { text: 'Cancel', style: 'cancel' },
+                    ],
+                    { cancelable: true }
+                  );
+                } else {
+                  // iOS - show all options
+                  const soldOutText = cat.isSoldOut ? 'Mark Available' : 'Sold Out';
+                  const soldOutTimeText = cat.soldOutSchedule?.enabled && cat.soldOutSchedule?.endTime
+                    ? (() => {
+                        const [h, m] = cat.soldOutSchedule.endTime.split(':').map(Number);
+                        const p = h >= 12 ? 'PM' : 'AM';
+                        const h12 = h % 12 || 12;
+                        return ` (Until ${h12}:${m.toString().padStart(2, '0')} ${p})`;
+                      })()
+                    : '';
+                  
+                  Alert.alert(
+                    cat.name + (cat.isSoldOut ? ' - SOLD OUT' + soldOutTimeText : (isScheduledLocked ? ' - SCHEDULED' + scheduleTimeText : '')),
+                    'What would you like to do?',
+                    [
+                      { text: soldOutText, onPress: () => showSoldOutOptions(cat), style: cat.isSoldOut ? 'default' : 'destructive' },
+                      { text: 'Schedule', onPress: () => openScheduleModal(cat) },
+                      { text: 'Edit', onPress: () => openCategoryModal(cat) },
+                      { text: 'Delete', style: 'destructive', onPress: () => deleteCategory(cat) },
+                      { text: 'Cancel', style: 'cancel' },
+                    ],
+                    { cancelable: true }
+                  );
+                }
+              };
+
               return (
                 <TouchableOpacity
                   key={cat._id}
                   style={styles.categoryItem}
-                  onPress={() => setSelectedCategory(cat.name)}
-                  onLongPress={() => {
-                    const soldOutText = cat.isSoldOut ? 'Mark Available' : 'Sold Out';
-                    const soldOutTimeText = cat.soldOutSchedule?.enabled && cat.soldOutSchedule?.endTime
-                      ? (() => {
-                          const [h, m] = cat.soldOutSchedule.endTime.split(':').map(Number);
-                          const p = h >= 12 ? 'PM' : 'AM';
-                          const h12 = h % 12 || 12;
-                          return ` (Until ${h12}:${m.toString().padStart(2, '0')} ${p})`;
-                        })()
-                      : '';
-                    const scheduleTimeText = isScheduledLocked && cat.schedule?.enabled
-                      ? ` (${formatScheduleDisplay(cat.schedule)})`
-                      : '';
-                    
-                    Alert.alert(
-                      cat.name + (cat.isSoldOut ? ' - SOLD OUT' + soldOutTimeText : (isScheduledLocked ? ' - SCHEDULED' + scheduleTimeText : '')),
-                      'What would you like to do?',
-                      [
-                        { text: 'Cancel', style: 'cancel' },
-                        { text: soldOutText, onPress: () => showSoldOutOptions(cat), style: cat.isSoldOut ? 'default' : 'destructive' },
-                        { text: 'Schedule', onPress: () => openScheduleModal(cat) },
-                        { text: 'Edit', onPress: () => openCategoryModal(cat) },
-                        { text: 'Delete', style: 'destructive', onPress: () => deleteCategory(cat) },
-                      ]
-                    );
-                  }}
+                  onPress={handleCategoryPress}
+                  onLongPress={handleCategoryLongPress}
                   disabled={isDeleting}
                 >
                   <View style={[

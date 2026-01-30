@@ -34,7 +34,8 @@ router.get('/', async (req, res) => {
 router.post('/', authMiddleware, upload.single('image'), async (req, res) => {
   try {
     const { name, description, image } = req.body;
-    const existing = await Category.findOne({ name: { $regex: new RegExp(`^${name}`, 'i') } });
+    // Check for exact match (case-insensitive)
+    const existing = await Category.findOne({ name: { $regex: new RegExp(`^${name.trim()}$`, 'i') } });
     if (existing) {
       return res.status(400).json({ error: 'Category already exists' });
     }
@@ -46,7 +47,7 @@ router.post('/', authMiddleware, upload.single('image'), async (req, res) => {
       imageUrl = await cloudinaryService.uploadFromBuffer(req.file.buffer, 'restaurant-bot/categories');
     }
     
-    const category = new Category({ name, description, image: imageUrl });
+    const category = new Category({ name: name.trim(), description, image: imageUrl });
     await category.save();
     
     // Emit event for real-time updates
@@ -62,6 +63,17 @@ router.post('/', authMiddleware, upload.single('image'), async (req, res) => {
 router.put('/:id', authMiddleware, upload.single('image'), async (req, res) => {
   try {
     const { name, description, image, isActive, isPaused, sortOrder, removeImage } = req.body;
+    
+    // Check if name is being changed and if new name already exists
+    if (name) {
+      const existing = await Category.findOne({ 
+        name: { $regex: new RegExp(`^${name.trim()}$`, 'i') },
+        _id: { $ne: req.params.id } // Exclude current category
+      });
+      if (existing) {
+        return res.status(400).json({ error: 'Category name already exists' });
+      }
+    }
     
     // Get existing category to check for old image
     const existingCategory = await Category.findById(req.params.id);
@@ -98,7 +110,7 @@ router.put('/:id', authMiddleware, upload.single('image'), async (req, res) => {
     
     const category = await Category.findByIdAndUpdate(
       req.params.id,
-      { name, description, image: imageUrl, isActive, isPaused, sortOrder },
+      { name: name ? name.trim() : undefined, description, image: imageUrl, isActive, isPaused, sortOrder },
       { new: true }
     );
     
