@@ -7,7 +7,7 @@ const menuItemSchema = new mongoose.Schema({
   originalPrice: { type: Number }, // Original price before discount
   offerPrice: { type: Number }, // Price after offer discount is applied
   category: { type: [String], required: true },
-  unit: { type: String, default: 'piece', enum: ['piece', 'kg', 'gram', 'liter', 'ml', 'plate', 'bowl', 'cup', 'slice', 'inch', 'full', 'half', 'small'] },
+  unit: { type: String, default: 'piece', enum: ['piece', 'kg', 'gram', 'liter', 'ml', 'plate', 'bowl', 'cup', 'slice', 'inch', 'full', 'half', 'small', 'half glass', 'full glass'] },
   quantity: { type: Number, default: 1 },
   foodType: { type: String, default: 'none', enum: ['veg', 'nonveg', 'egg', 'none'] },
   offerType: { type: [String], default: [] }, // Links to offer types from Offers (can have multiple)

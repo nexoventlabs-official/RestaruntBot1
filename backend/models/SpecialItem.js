@@ -15,7 +15,7 @@ const specialItemSchema = new mongoose.Schema({
     },
     default: {}
   }, // Per-day schedules: { "0": { startTime: "09:00", endTime: "17:00" }, "1": { startTime: "11:00", endTime: "23:00" } }
-  unit: { type: String, default: 'piece', enum: ['piece', 'kg', 'gram', 'liter', 'ml', 'plate', 'bowl', 'cup', 'slice', 'inch', 'full', 'half', 'small'] },
+  unit: { type: String, default: 'piece', enum: ['piece', 'kg', 'gram', 'liter', 'ml', 'plate', 'bowl', 'cup', 'slice', 'inch', 'full', 'half', 'small', 'half glass', 'full glass'] },
   quantity: { type: Number, default: 1 },
   foodType: { type: String, default: 'none', enum: ['veg', 'nonveg', 'egg', 'none'] },
   image: { type: String },

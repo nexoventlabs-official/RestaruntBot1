@@ -20,7 +20,7 @@ const FOOD_TYPES = [
   { value: 'egg', label: 'Egg', color: '#F59E0B' },
 ];
 
-const UNITS = ['piece', 'plate', 'bowl', 'cup', 'slice', 'full', 'half', 'small', 'kg', 'gram', 'liter', 'ml', 'inch'];
+const UNITS = ['piece', 'plate', 'bowl', 'cup', 'slice', 'full', 'half', 'small', 'half glass', 'full glass', 'kg', 'gram', 'liter', 'ml', 'inch'];
 
 export default function SpecialItemFormScreen({ route, navigation }) {
   const existingItem = route.params?.item;
