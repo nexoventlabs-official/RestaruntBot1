@@ -283,24 +283,34 @@ If already standard or you're unsure, return as is.`
       const completion = await client.chat.completions.create({
         messages: [{
           role: 'system',
-          content: `You are a restaurant menu tag generator. Generate EXACTLY 7 accurate, searchable tags for menu items.
+          content: `You are a restaurant menu tag generator for INDIAN customers. Generate EXACTLY 7 SIMPLE, SEARCHABLE tags that Indian customers would actually use to search for this food item.
 
-RULES:
+CRITICAL RULES FOR INDIAN CUSTOMERS:
 1. Generate EXACTLY 7 tags, no more, no less
-2. Tags must be highly relevant to the item name, category, and type
-3. Include variations of the item name (e.g., "biryani" → "biriyani", "briyani")
-4. Include main ingredients (chicken, paneer, mutton, fish, prawn, egg, dal, aloo, gobi, mushroom)
-5. Include taste/cooking style (spicy, mild, crispy, fried, grilled, tandoor, curry, gravy, dry)
-6. Include meal type (breakfast, lunch, dinner, snacks, appetizer, main course, dessert)
-7. Include cuisine type (south indian, north indian, chinese, continental, hyderabadi, punjabi)
-8. All tags must be lowercase, single words or short phrases (max 2 words)
-9. No generic words like "food", "item", "dish"
-10. Be specific and accurate to help customers find this item
+2. Use SIMPLE, COMMON words that Indians use daily (not complicated English words)
+3. Include HINDI/TELUGU/TAMIL words if commonly used (dosa, idli, biryani, masala, curry, fry, etc.)
+4. Include main ingredient (chicken, paneer, mutton, fish, egg, dal, rice, roti, etc.)
+5. Include cooking style ONLY if obvious (fried, grilled, curry, gravy, dry, spicy, etc.)
+6. Include meal time if relevant (breakfast, tiffin, lunch, dinner, snack)
+7. Include popular search terms Indians use (veg, nonveg, spicy, tasty, special, etc.)
+8. ALL tags must be lowercase, single words (preferred) or max 2 words
+9. NO complicated words like "appetizer", "continental", "preparation"
+10. NO generic words like "food", "item", "dish", "delicious"
+
+EXAMPLES OF GOOD TAGS (simple, searchable):
+- Chicken Biryani → chicken, biryani, rice, spicy, nonveg, lunch, hyderabadi
+- Masala Dosa → dosa, masala, breakfast, crispy, south indian, tiffin, veg
+- Paneer Butter Masala → paneer, butter, masala, curry, veg, north indian, dinner
+- Egg Fried Rice → egg, rice, fried, chinese, dinner, spicy, nonveg
+- Idli Sambar → idli, sambar, breakfast, tiffin, south indian, soft, veg
+
+EXAMPLES OF BAD TAGS (too complicated):
+- "appetizer", "preparation", "continental", "delectable", "scrumptious"
 
 Return ONLY comma-separated tags, nothing else.`
         }, {
           role: 'user',
-          content: `Generate exactly 7 tags for:
+          content: `Generate exactly 7 SIMPLE, SEARCHABLE tags for Indian customers:
 Item Name: "${itemName}"
 Category: ${categoryText}
 Food Type: ${foodTypeText}
@@ -332,35 +342,85 @@ Tags:`
       // Remove duplicates
       tags = [...new Set(tags)];
       
-      // If we don't have exactly 7 tags, add fallback tags
+      // If we don't have exactly 7 tags, add SIMPLE fallback tags
       if (tags.length < 7) {
         const fallbackTags = [];
         
-        // Add item name words
+        // Add simple words from item name (avoid complicated words)
         const nameWords = itemName
           .toLowerCase()
           .replace(/[^a-z0-9\s]/gi, ' ')
           .split(/\s+/)
-          .filter(word => word.length > 2);
+          .filter(word => word.length > 2 && !['the', 'and', 'with', 'for'].includes(word));
         fallbackTags.push(...nameWords);
         
-        // Add categories
-        fallbackTags.push(...categories.map(c => c.toLowerCase().trim()));
+        // Add simple category words
+        const categoryWords = categories
+          .map(c => c.toLowerCase().trim())
+          .filter(c => c.length > 2);
+        fallbackTags.push(...categoryWords);
         
         // Add food type
         if (foodType && foodType !== 'none') {
           fallbackTags.push(foodType);
         }
         
-        // Add common tags based on category
+        // Add SIMPLE, COMMON tags based on category (what Indians actually search for)
         const categoryLower = categoryText.toLowerCase();
-        if (categoryLower.includes('biryani')) fallbackTags.push('rice', 'spicy');
-        if (categoryLower.includes('breakfast')) fallbackTags.push('morning', 'tiffin');
-        if (categoryLower.includes('curry')) fallbackTags.push('gravy', 'spicy');
-        if (categoryLower.includes('fry')) fallbackTags.push('crispy', 'fried');
-        if (categoryLower.includes('chinese')) fallbackTags.push('indo-chinese', 'spicy');
-        if (categoryLower.includes('dessert') || categoryLower.includes('sweet')) fallbackTags.push('sweet', 'dessert');
-        if (categoryLower.includes('beverage') || categoryLower.includes('juice')) fallbackTags.push('drink', 'refreshing');
+        
+        // Rice dishes
+        if (categoryLower.includes('biryani')) {
+          fallbackTags.push('rice', 'spicy', 'lunch');
+        } else if (categoryLower.includes('rice')) {
+          fallbackTags.push('rice', 'lunch', 'dinner');
+        }
+        
+        // Breakfast/Tiffin
+        if (categoryLower.includes('breakfast') || categoryLower.includes('tiffin')) {
+          fallbackTags.push('breakfast', 'tiffin', 'morning');
+        }
+        
+        // Dosa/Idli
+        if (categoryLower.includes('dosa')) {
+          fallbackTags.push('dosa', 'crispy', 'south indian');
+        } else if (categoryLower.includes('idli')) {
+          fallbackTags.push('idli', 'soft', 'south indian');
+        }
+        
+        // Curry/Gravy
+        if (categoryLower.includes('curry') || categoryLower.includes('gravy')) {
+          fallbackTags.push('curry', 'gravy', 'spicy');
+        }
+        
+        // Fry/Fried
+        if (categoryLower.includes('fry') || categoryLower.includes('fried')) {
+          fallbackTags.push('fried', 'crispy', 'spicy');
+        }
+        
+        // Chinese
+        if (categoryLower.includes('chinese') || categoryLower.includes('noodles') || categoryLower.includes('manchurian')) {
+          fallbackTags.push('chinese', 'spicy', 'fried');
+        }
+        
+        // Roti/Bread
+        if (categoryLower.includes('roti') || categoryLower.includes('naan') || categoryLower.includes('parotta')) {
+          fallbackTags.push('roti', 'bread', 'dinner');
+        }
+        
+        // Dessert/Sweet
+        if (categoryLower.includes('dessert') || categoryLower.includes('sweet')) {
+          fallbackTags.push('sweet', 'dessert', 'tasty');
+        }
+        
+        // Beverage/Juice
+        if (categoryLower.includes('beverage') || categoryLower.includes('juice') || categoryLower.includes('drink')) {
+          fallbackTags.push('drink', 'cold', 'fresh');
+        }
+        
+        // Snacks
+        if (categoryLower.includes('snack') || categoryLower.includes('starter')) {
+          fallbackTags.push('snack', 'tasty', 'crispy');
+        }
         
         // Add fallback tags that aren't already in the list
         for (const tag of fallbackTags) {
@@ -377,15 +437,15 @@ Tags:`
       return tags.join(', ');
     } catch (error) {
       console.error('Groq AI tags error:', error);
-      // Fallback: generate basic tags from item name and category
+      // Fallback: generate SIMPLE basic tags from item name and category
       const categories = Array.isArray(category) ? category : [category];
       const nameWords = itemName.toLowerCase().replace(/[^a-z0-9\s]/gi, ' ').split(/\s+/).filter(w => w.length > 2);
       const categoryWords = categories.map(c => c.toLowerCase().trim());
       const fallbackTags = [...new Set([...nameWords, ...categoryWords])];
       if (foodType && foodType !== 'none') fallbackTags.push(foodType);
       
-      // Pad to 7 tags if needed
-      const commonTags = ['popular', 'tasty', 'fresh', 'delicious', 'special'];
+      // Pad to 7 tags with SIMPLE common words
+      const commonTags = ['tasty', 'special', 'fresh', 'spicy', 'hot', 'popular', 'best'];
       for (const tag of commonTags) {
         if (fallbackTags.length >= 7) break;
         if (!fallbackTags.includes(tag)) fallbackTags.push(tag);
