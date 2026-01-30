@@ -1705,10 +1705,27 @@ const chatbot = {
     const searchKeywords = primarySearchTerm.split(/\s+/).filter(k => k.length >= 2);
     
     // Common ingredient/generic words that should search by tags, not exact name
+    // Include both English and regional language synonyms
     const commonIngredients = [
-      'rice', 'chicken', 'mutton', 'fish', 'prawn', 'egg', 'paneer', 'dal', 
-      'aloo', 'gobi', 'mushroom', 'roti', 'naan', 'parotta', 'dosa', 'idli',
-      'biryani', 'curry', 'fry', 'masala', 'gravy', 'soup', 'salad', 'juice'
+      'rice', 'annam', 'chawal', 'bhat', // rice synonyms
+      'chicken', 'kodi', 'kozhi', 'murgh', // chicken synonyms
+      'mutton', 'gosht', 'lamb', // mutton synonyms
+      'fish', 'meen', 'chepa', 'machli', // fish synonyms
+      'prawn', 'prawns', 'shrimp', // prawn synonyms
+      'egg', 'anda', 'guddu', 'muttai', 'motte', // egg synonyms
+      'paneer', 'cottage cheese', // paneer synonyms
+      'dal', 'pappu', 'daal', 'lentils', // dal synonyms
+      'aloo', 'potato', 'urulai', // potato synonyms
+      'gobi', 'cauliflower', 'gobhi', // cauliflower synonyms
+      'mushroom', 'roti', 'chapati', 'chapathi', // bread synonyms
+      'naan', 'nan', 'parotta', 'paratha', // bread synonyms
+      'dosa', 'dosai', 'dose', // dosa synonyms
+      'idli', 'idly', 'idle', // idli synonyms
+      'biryani', 'biriyani', 'briyani', // biryani synonyms
+      'curry', 'kura', 'koora', 'kuzhambu', 'pulusu', // curry synonyms
+      'fry', 'vepudu', 'varuval', 'bhaji', // fry synonyms
+      'masala', 'gravy', 'rassa', // gravy synonyms
+      'soup', 'salad', 'juice'
     ];
     
     // ========== CHECK FOR EXACT NAME MATCH FIRST (MENU ITEMS + SPECIAL ITEMS) ==========
@@ -1720,6 +1737,12 @@ const chatbot = {
       
       if (!isCommonIngredient) {
         for (const searchTerm of uniqueSearchTerms) {
+          // Also skip exact name match if this synonym is a common ingredient
+          if (commonIngredients.includes(searchTerm.toLowerCase())) {
+            console.log(`🔍 Skipping exact name match for common ingredient synonym: "${searchTerm}"`);
+            continue;
+          }
+          
           const searchLower = searchTerm.toLowerCase();
           const searchNorm = normalizeForMatch(searchTerm);
           
