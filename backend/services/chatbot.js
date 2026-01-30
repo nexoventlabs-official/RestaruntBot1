@@ -1693,6 +1693,7 @@ const chatbot = {
     // Add unique variations (including synonyms)
     const uniqueSearchTerms = [...new Set(expandedTerms)];
     console.log(`🔍 Search terms with synonyms: [${uniqueSearchTerms.join(', ')}]`);
+    console.log(`🔍 Primary search term: "${primarySearchTerm}"`);
     
     // If search term is too short after removing keywords, search by ingredient/type only
     const hasSearchTerm = primarySearchTerm.length >= 2;
@@ -1756,19 +1757,30 @@ const chatbot = {
       
       // ========== CHECK FOR EXACT TAG MATCH (e.g., "rice" matches all items with "rice" tag) ==========
       
+      console.log(`🔍 Searching for tags matching keywords: [${searchKeywords.join(', ')}]`);
+      
       // First try: Find items where ALL keywords match tags exactly
       const allKeywordsMenuMatches = menuItems.filter(item => {
-        if (!item.tags || item.tags.length === 0) return false;
+        if (!item.tags || item.tags.length === 0) {
+          return false;
+        }
         const itemTagsLower = item.tags.map(t => t.toLowerCase().trim());
         const itemTagsNorm = item.tags.map(t => normalizeForMatch(t));
         
         // Check if ALL search keywords match at least one tag
-        return searchKeywords.every(keyword => {
+        const matches = searchKeywords.every(keyword => {
           const kwLower = keyword.toLowerCase();
           const kwNorm = normalizeForMatch(keyword);
-          return itemTagsLower.some(tag => tag === kwLower || tag.includes(kwLower) || kwLower.includes(tag)) ||
+          const hasMatch = itemTagsLower.some(tag => tag === kwLower || tag.includes(kwLower) || kwLower.includes(tag)) ||
                  itemTagsNorm.some(tagNorm => tagNorm === kwNorm || tagNorm.includes(kwNorm) || kwNorm.includes(tagNorm));
+          
+          if (hasMatch) {
+            console.log(`  ✓ "${item.name}" matches keyword "${keyword}" (tags: ${itemTagsLower.join(', ')})`);
+          }
+          return hasMatch;
         });
+        
+        return matches;
       });
       
       const allKeywordsSpecialMatches = activeSpecialItems.filter(item => {
